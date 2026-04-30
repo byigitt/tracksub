@@ -16,6 +16,8 @@ export type Subscription = {
   status: Status;
   startedAt: string; // ISO
   nextBillingAt: string | null; // ISO | null
+  isTrial: boolean;
+  trialEndsAt: string | null; // ISO | null — only meaningful when isTrial=true
   notes: string | null;
   source: Source;
   createdAt: string;
@@ -32,6 +34,8 @@ export type SubscriptionCreateBody = {
   status?: Status;
   startedAt?: string; // ISO
   nextBillingAt?: string | null; // ISO | null
+  isTrial?: boolean;
+  trialEndsAt?: string | null; // ISO | null
   notes?: string | null;
   source?: Source;
 };
