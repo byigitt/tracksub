@@ -1,0 +1,38 @@
+{
+  "name": "@tracksub/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=../../.env src/index.ts",
+    "build": "rm -rf dist && tsgo --build",
+    "clean": "rm -rf dist",
+    "start": "node --env-file-if-exists=../../.env dist/index.js",
+    "typecheck": "tsgo --noEmit",
+    "db:generate": "dotenv -e ../../.env -- drizzle-kit generate --config=drizzle.config.ts",
+    "db:migrate": "node --env-file=../../.env --import tsx ./scripts/migrate.ts",
+    "db:push": "dotenv -e ../../.env -- drizzle-kit push --force",
+    "db:studio": "dotenv -e ../../.env -- drizzle-kit studio",
+    "auth:generate": "dotenv -e ../../.env -- better-auth generate --output ./src/db/schema.ts --y"
+  },
+  "dependencies": {
+    "@fastify/autoload": "catalog:",
+    "@fastify/cors": "catalog:",
+    "better-auth": "catalog:",
+    "drizzle-orm": "catalog:",
+    "fastify": "catalog:",
+    "fastify-plugin": "catalog:",
+    "pg": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "dotenv-cli": "catalog:",
+    "drizzle-kit": "catalog:",
+    "pino-pretty": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:"
+  }
+}
