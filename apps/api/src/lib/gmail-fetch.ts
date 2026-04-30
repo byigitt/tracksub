@@ -93,6 +93,8 @@ export type FetchOptions = {
   query?: string;
   /** Cap on messages returned (we run AI on each → keep it bounded). Default 200. */
   limit?: number;
+  /** Optional logger — we log per-query hit counts when present. */
+  logger?: { info: (msg: unknown) => void };
 };
 
 export const fetchRecentMessages = async (opts: FetchOptions): Promise<FetchedMessage[]> => {
@@ -108,26 +110,51 @@ export const fetchRecentMessages = async (opts: FetchOptions): Promise<FetchedMe
   const baseQuery = `after:${sinceTs}`;
   const limit = Math.max(1, Math.min(opts.limit ?? 200, 500));
 
-  // Multi-query keyword search. Gmail's `q` operator (server-side full-text)
-  // is faster + more precise than fetching 500 mails and filtering client-side.
-  // We dispatch several narrow queries in parallel, dedupe, then fetch metadata.
+  // Multi-query keyword search. Gmail's `q` operator (server-side full-text) is
+  // faster + more precise than fetching 500 mails and filtering client-side. We
+  // dispatch many narrow queries in parallel, dedupe by ID, then fetch metadata.
   //
-  // Each query targets a distinct subscription "signal":
+  // Quota note: each list = 5 units; 25 queries = 125 units (well under 250/s/user).
+  // Wall time is bound by the SLOWEST query (~200-500ms), not the sum.
+  //
+  // Coverage strategy: TR/EN keywords + vendor sender patterns + Gmail's own
+  // categorizer. The same mail will often match multiple queries — dedupe handles
+  // it. Goal: cast a wide net for *true* subscription mails while still keeping
+  // promotional/marketing mail ("%50 indirim", "yeni ürününüz") out of the result.
   const subscriptionQueries: string[] = [
-    // TR yenileme/abonelik
-    'subject:(yenilendi OR yenilenecek OR "üyelik" OR "aboneliğin" OR "abonelik")',
-    // TR fatura/ödeme
-    'subject:(fatura OR makbuz OR "ödeme" OR "tahsil" OR "ödenecek")',
-    // EN renewal
-    'subject:(renewed OR renewal OR "auto-renew" OR "renews on")',
-    // EN invoice/receipt
-    'subject:(invoice OR receipt OR "thank you for your payment" OR "payment receipt")',
-    // EN charged/billed
-    'subject:("has been charged" OR "will be charged" OR "upcoming payment" OR "charge" OR billed)',
-    // Vendor sender pattern + payment-ish subject
-    'from:(billing OR receipts OR invoice OR "no-reply" OR noreply) subject:(payment OR invoice OR receipt OR fatura OR ödeme)',
-    // Google's own category — most reliable for purchase confirmations
+    // -- Turkish: renewal/membership --
+    'subject:(yenilendi OR yenilenecek OR yenileniyor OR "yenileme tarihi")',
+    'subject:("üyeliğin" OR "üyeliğiniz" OR "abonelik" OR "aboneliğin" OR "aboneliğiniz" OR "üyelik")',
+    'subject:("paketin" OR "paketiniz" OR planiniz OR planın)',
+    // -- Turkish: payment/invoice --
+    'subject:(fatura OR faturanız OR faturan OR makbuz OR e-fatura OR "e-makbuz")',
+    'subject:("ödeme" OR "ödemen" OR "ödemeniz" OR "ödenecek" OR "ödenmiş")',
+    'subject:("tahsil" OR "tahsilat" OR "çekildi" OR "hesabınızdan" OR "kartınızdan")',
+    // -- English: renewal/subscription --
+    'subject:(renewed OR renewal OR "auto-renew" OR "auto-renewed" OR "renews on" OR "renewal date")',
+    'subject:("your subscription" OR "subscription confirmation" OR "membership renewed" OR "membership renewal")',
+    'subject:("next billing" OR "next charge" OR "upcoming bill" OR "upcoming charge")',
+    // -- English: payment/invoice/receipt --
+    'subject:(invoice OR receipt OR "order confirmation" OR "order receipt")',
+    'subject:("thank you for your payment" OR "payment received" OR "payment confirmation" OR "payment receipt")',
+    'subject:("has been charged" OR "will be charged" OR "successfully charged" OR "we charged")',
+    'subject:("your bill" OR "monthly bill" OR "annual bill" OR "bill is ready" OR "bill due")',
+    'subject:(billed OR "auto-billed" OR "billing statement")',
+    // -- Vendor-aware sender patterns + payment subject --
+    'from:(billing OR receipts OR invoice OR "no-reply" OR noreply OR notifications) subject:(payment OR invoice OR receipt OR subscription OR fatura OR ödeme OR üyelik)',
+    // -- Vendor-specific senders that ALWAYS send subscription mails --
+    'from:(no_reply@email.apple.com OR no-reply@spotify.com OR info@spotify.com)',
+    'from:(account-update@amazon.com OR no-reply@amazon.com) subject:(subscription OR "prime" OR membership)',
+    'from:(noreply@github.com) subject:(invoice OR receipt OR billing OR subscription)',
+    'from:(billing@netflix.com OR info@account.netflix.com OR info@mailer.netflix.com)',
+    'from:(no-reply@google.com OR payments-noreply@google.com) subject:(subscription OR receipt OR invoice OR "google one")',
+    'from:(no-reply@hetzner.com OR robot-noreply@hetzner.com OR billing@cloudflare.com)',
+    'from:(receipts@stripe.com OR notifications@stripe.com OR no-reply@stripe.com)',
+    'from:(billing@figma.com OR billing@notion.so OR receipts@linear.app OR billing@vercel.com)',
+    // -- Gmail's own categorizer — most reliable for true purchase/sub mails --
     'category:purchases',
+    // -- Forums: some service bills land here --
+    'category:forums subject:(invoice OR receipt OR subscription OR billing OR fatura OR ödeme)',
   ];
 
   const tryList = async (q: string, max?: number) => {
@@ -150,7 +177,9 @@ export const fetchRecentMessages = async (opts: FetchOptions): Promise<FetchedMe
       subscriptionQueries.map((q) => tryList(`${baseQuery} ${q}`, perQuery).catch(() => [])),
     );
     const seen = new Set<string>();
+    let totalHits = 0;
     for (const list of lists) {
+      totalHits += list.length;
       for (const id of list) {
         if (seen.has(id)) continue;
         seen.add(id);
@@ -158,6 +187,15 @@ export const fetchRecentMessages = async (opts: FetchOptions): Promise<FetchedMe
         if (ids.length >= limit) break;
       }
       if (ids.length >= limit) break;
+    }
+    if (opts.logger) {
+      opts.logger.info({
+        msg: 'gmail multi-keyword search',
+        queries: subscriptionQueries.length,
+        totalHits,
+        uniqueIds: ids.length,
+        perQueryHits: lists.map((l, i) => ({ q: subscriptionQueries[i], hits: l.length })),
+      });
     }
     // Last-resort fallback: if keyword search caught nothing (very empty inbox
     // or unusual locale), at least pull Google's purchases category.
