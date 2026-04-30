@@ -8,7 +8,7 @@ import {
 } from '@/features/subscriptions/subscription-card';
 import { useSubscriptions } from '@/features/subscriptions/use-subscriptions';
 
-export const Route = createFileRoute('/_authenticated/subscriptions')({
+export const Route = createFileRoute('/_authenticated/subscriptions/')({
   component: SubscriptionsPage,
 });
 
