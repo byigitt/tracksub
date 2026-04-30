@@ -23,7 +23,7 @@ import {
   type Subscription,
   type SubscriptionCreateBody,
   type SubscriptionUpdateBody,
-} from './types';
+} from '@tracksub/shared';
 
 type FormValues = {
   name: string;

@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import type { Candidate, SyncSubject } from '@tracksub/shared';
+import { useGmailStatus, useGmailSync, useParseText } from '@tracksub/query';
 import { CandidatesList } from './candidates-list';
-import { type SyncSubject, useGmailStatus, useGmailSync } from './use-gmail';
-import { type Candidate, useParseText } from './use-parse-text';
 
 type Props = {
   open: boolean;

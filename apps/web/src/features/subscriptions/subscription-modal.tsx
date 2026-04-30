@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteSubscriptionDialog } from './delete-subscription-dialog';
 import { SubscriptionForm } from './subscription-form';
-import { useCreateSubscription, useSubscription, useUpdateSubscription } from './use-subscriptions';
+import { useCreateSubscription, useSubscription, useUpdateSubscription } from '@tracksub/query';
 
 type Props = {
   open: boolean;

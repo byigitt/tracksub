@@ -4,9 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { BrandIcon } from './brand-icon';
-import { formatMoney } from './format';
-import { PERIOD_LABELS } from './types';
-import { useConfirmCandidates, type Candidate, type CandidateKind } from './use-parse-text';
+import { formatMoney, PERIOD_LABELS, type Candidate, type CandidateKind } from '@tracksub/shared';
+import { useConfirmCandidates } from '@tracksub/query';
 
 // Format ISO date strings (YYYY-MM-DD) as Turkish short date ("15 Nis 2026").
 // Treat YYYY-MM-DD as UTC midnight to avoid TZ drift.

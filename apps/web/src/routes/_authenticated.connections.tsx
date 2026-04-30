@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { signIn } from '@/lib/auth-client';
 import { ConnectionCard } from '@/features/connections/connection-card';
-import { useGmailDisconnect, useGmailStatus } from '@/features/subscriptions/use-gmail';
+import { useGmailDisconnect, useGmailStatus } from '@tracksub/query';
 
 export const Route = createFileRoute('/_authenticated/connections')({
   component: ConnectionsPage,

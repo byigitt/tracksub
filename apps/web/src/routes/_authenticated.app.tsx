@@ -3,18 +3,22 @@ import { PlusIcon, SearchIcon, SparklesIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  computeSummary,
+  formatDaysLeft,
+  formatMoney,
+  STATUS_LABELS,
+  type Status,
+} from '@tracksub/shared';
+import { useMe, useSubscriptions } from '@tracksub/query';
 import { cn } from '@/lib/utils';
-import { useMe } from '@/features/me/use-me';
-import { formatDaysLeft, formatMoney } from '@/features/subscriptions/format';
+
 import { ImportModal } from '@/features/subscriptions/import-modal';
 import {
   SubscriptionCard,
   SubscriptionCardSkeleton,
 } from '@/features/subscriptions/subscription-card';
 import { SubscriptionModal } from '@/features/subscriptions/subscription-modal';
-import { computeSummary } from '@/features/subscriptions/summary';
-import { STATUS_LABELS, type Status } from '@/features/subscriptions/types';
-import { useSubscriptions } from '@/features/subscriptions/use-subscriptions';
 
 type ModalSearch = 'new' | 'edit' | 'import';
 

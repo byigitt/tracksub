@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { useDeleteSubscription } from './use-subscriptions';
+import { useDeleteSubscription } from '@tracksub/query';
 
 type Props = {
   open: boolean;

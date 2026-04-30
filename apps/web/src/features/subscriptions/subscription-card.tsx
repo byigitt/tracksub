@@ -1,8 +1,16 @@
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { BrandIcon } from './brand-icon';
-import { daysUntil, formatDate, formatDaysLeft, formatMoney, formatPeriod } from './format';
-import { STATUS_LABELS, type Status, type Subscription } from './types';
+import {
+  daysUntil,
+  formatDate,
+  formatDaysLeft,
+  formatMoney,
+  formatPeriod,
+  STATUS_LABELS,
+  type Status,
+  type Subscription,
+} from '@tracksub/shared';
 
 const statusVariant: Record<Status, 'default' | 'secondary' | 'destructive' | 'muted'> = {
   active: 'default',

@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { sessionQueryKey } from '@/features/auth/use-session';
-import { useMe } from '@/features/me/use-me';
+import { useMe } from '@tracksub/query';
 import { signOut } from '@/lib/auth-client';
 
 const initials = (name?: string | null, email?: string | null): string => {
