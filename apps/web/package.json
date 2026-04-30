@@ -13,9 +13,7 @@
   "dependencies": {
     "@tanstack/react-form": "catalog:",
     "@tanstack/react-query": "catalog:",
-    "@tanstack/react-query-devtools": "catalog:",
     "@tanstack/react-router": "catalog:",
-    "@tanstack/react-router-devtools": "catalog:",
     "@tracksub/api-client": "workspace:*",
     "@tracksub/query": "workspace:*",
     "@tracksub/schemas": "workspace:*",
