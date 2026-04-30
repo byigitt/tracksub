@@ -141,9 +141,22 @@ export const CandidatesList = ({ jobId, candidates, onAdded }: Props) => {
                   {c.vendor && (
                     <span className="truncate text-xs text-muted-foreground">{c.vendor}</span>
                   )}
+                  {(c.occurrenceCount ?? 1) > 1 && (
+                    <Badge
+                      variant="muted"
+                      className="ml-auto text-[10px]"
+                      title={`Bu abonelik ${c.occurrenceCount} farklı mailde tespit edildi (muhtemelen aylık yenileme).`}
+                    >
+                      {c.occurrenceCount}×
+                    </Badge>
+                  )}
                   <Badge
                     variant="outline"
-                    className={cn('ml-auto text-[10px]', km.cls)}
+                    className={cn(
+                      (c.occurrenceCount ?? 1) > 1 ? '' : 'ml-auto',
+                      'text-[10px]',
+                      km.cls,
+                    )}
                     title={km.hint}
                   >
                     {km.label}

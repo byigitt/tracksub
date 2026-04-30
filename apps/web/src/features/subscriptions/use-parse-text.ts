@@ -18,6 +18,8 @@ export type Candidate = {
   confidence: number;
   evidence?: string | null;
   kind?: CandidateKind;
+  /** How many distinct mails this same logical sub appeared in (post-dedupe). */
+  occurrenceCount?: number;
 };
 
 export type ParseResponse = { jobId: string; candidates: Candidate[] };

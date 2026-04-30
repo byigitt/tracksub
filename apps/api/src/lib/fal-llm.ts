@@ -222,14 +222,101 @@ export const parseSubscriptionsFromText = async (
 
 export type BatchInput = { id: string; text: string };
 
-const dedupeCandidates = (lists: Candidate[][]): Candidate[] => {
-  const seen = new Map<string, Candidate>();
+// Tier/edition suffixes that should be stripped before brand matching.
+// "Netflix Standard" ≡ "Netflix Premium" ≡ "Netflix" for dedupe purposes.
+const TIER_TOKENS = [
+  'premium',
+  'plus',
+  'pro',
+  'lite',
+  'basic',
+  'standard',
+  'family',
+  'duo',
+  'individual',
+  'personal',
+  'student',
+  'business',
+  'enterprise',
+  'free',
+  'unlimited',
+  'extra',
+  'mini',
+  'starter',
+  'aile',
+  'bireysel',
+  'öğrenci',
+  'ogrenci',
+  'tier',
+  'plan',
+  'paketi',
+  'subscription',
+  'aboneliği',
+  'aboneligi',
+  'üyeliği',
+  'uyeligi',
+];
+
+const stripDiacritics = (s: string): string => s.normalize('NFD').replace(/[\u0300-\u036f]/gu, '');
+
+const normalizeBrandKey = (name: string, vendor?: string | null): string => {
+  // Prefer vendor when present (cleaner: "Netflix Inc." vs name "Netflix Standard").
+  let raw = (vendor ?? name).toLowerCase();
+  raw = stripDiacritics(raw);
+  // Drop common corporate suffixes
+  raw = raw.replace(
+    /\b(inc|llc|ltd|gmbh|a\.s\.|a\.ş\.|co|corp|corporation|holdings|sarl|sa)\b/giu,
+    '',
+  );
+  // Drop tier/plan tokens
+  for (const tok of TIER_TOKENS) {
+    raw = raw.replace(new RegExp(`\\b${tok}\\b`, 'giu'), '');
+  }
+  // Keep only alphanumerics
+  raw = raw.replace(/[^a-z0-9]/gu, '');
+  return raw || name.toLowerCase().replace(/[^a-z0-9]/gu, '');
+};
+
+const pickFreshestDate = (
+  a: string | null | undefined,
+  b: string | null | undefined,
+): string | null => {
+  if (!a && !b) return null;
+  if (!a) return b ?? null;
+  if (!b) return a;
+  return a >= b ? a : b; // ISO YYYY-MM-DD compares lexically
+};
+
+export const dedupeCandidates = (lists: Candidate[][]): Candidate[] => {
+  // Same logical subscription ≡ normalizedBrand + period + currency. Amount is
+  // EXCLUDED from the key because vendors raise prices over time — we don't want
+  // April Netflix at 229.99 to be a different sub than May Netflix at 249.99.
+  type Acc = Candidate & { occurrenceCount?: number };
+  const seen = new Map<string, Acc>();
   for (const list of lists) {
     for (const c of list) {
-      // Same service + amount + currency from two mails → keep highest-confidence one.
-      const key = `${c.name.toLowerCase().trim()}|${c.amount.toFixed(2)}|${c.currency}`;
+      const brandKey = normalizeBrandKey(c.name, c.vendor);
+      const key = `${brandKey}|${c.period}|${c.currency}`;
       const existing = seen.get(key);
-      if (!existing || c.confidence > existing.confidence) seen.set(key, c);
+      if (!existing) {
+        seen.set(key, { ...c, occurrenceCount: 1 });
+        continue;
+      }
+      // Merge: keep the higher-confidence base, but always pull freshest dates
+      // and bump the occurrence count so UI can show "12 kez algilandı".
+      const winner = c.confidence > existing.confidence ? c : existing;
+      const merged: Acc = {
+        ...winner,
+        // Use the more-recent dates from either side.
+        lastChargedDate: pickFreshestDate(existing.lastChargedDate, c.lastChargedDate),
+        nextBillingDate: pickFreshestDate(existing.nextBillingDate, c.nextBillingDate),
+        // Keep the highest-amount when one of the merged rows had a price bump
+        // (mostly accurate — avoids "refund" rows pulling amount down).
+        amount: Math.max(existing.amount, c.amount),
+        confidence: Math.max(existing.confidence, c.confidence),
+        occurrenceCount: (existing.occurrenceCount ?? 1) + 1,
+      };
+      seen.set(key, merged);
     }
   }
   return [...seen.values()].sort((a, b) => b.confidence - a.confidence);

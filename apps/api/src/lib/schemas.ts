@@ -110,6 +110,8 @@ export const candidateSchema = z.object({
   confidence: z.number().min(0).max(1),
   evidence: z.string().max(1000).optional().nullable(),
   kind: candidateKindEnum.default('existing'),
+  /** How many mails the same logical subscription was found in (post-dedupe). */
+  occurrenceCount: z.number().int().min(1).optional(),
 });
 
 export const candidateListSchema = z.array(candidateSchema);

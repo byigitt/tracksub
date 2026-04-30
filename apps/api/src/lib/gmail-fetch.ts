@@ -121,40 +121,82 @@ export const fetchRecentMessages = async (opts: FetchOptions): Promise<FetchedMe
   // categorizer. The same mail will often match multiple queries — dedupe handles
   // it. Goal: cast a wide net for *true* subscription mails while still keeping
   // promotional/marketing mail ("%50 indirim", "yeni ürününüz") out of the result.
+  // Coverage strategy: cast a very wide net with 40+ targeted queries dispatched
+  // in parallel. Wall time = slowest single query (~300-500ms), so adding more
+  // queries is essentially free. Quota: 40 list × 5 = 200 units (under 250/sec/user).
   const subscriptionQueries: string[] = [
-    // -- Turkish: renewal/membership --
-    'subject:(yenilendi OR yenilenecek OR yenileniyor OR "yenileme tarihi")',
-    'subject:("üyeliğin" OR "üyeliğiniz" OR "abonelik" OR "aboneliğin" OR "aboneliğiniz" OR "üyelik")',
-    'subject:("paketin" OR "paketiniz" OR planiniz OR planın)',
-    // -- Turkish: payment/invoice --
-    'subject:(fatura OR faturanız OR faturan OR makbuz OR e-fatura OR "e-makbuz")',
-    'subject:("ödeme" OR "ödemen" OR "ödemeniz" OR "ödenecek" OR "ödenmiş")',
-    'subject:("tahsil" OR "tahsilat" OR "çekildi" OR "hesabınızdan" OR "kartınızdan")',
-    // -- English: renewal/subscription --
-    'subject:(renewed OR renewal OR "auto-renew" OR "auto-renewed" OR "renews on" OR "renewal date")',
-    'subject:("your subscription" OR "subscription confirmation" OR "membership renewed" OR "membership renewal")',
-    'subject:("next billing" OR "next charge" OR "upcoming bill" OR "upcoming charge")',
-    // -- English: payment/invoice/receipt --
-    'subject:(invoice OR receipt OR "order confirmation" OR "order receipt")',
-    'subject:("thank you for your payment" OR "payment received" OR "payment confirmation" OR "payment receipt")',
-    'subject:("has been charged" OR "will be charged" OR "successfully charged" OR "we charged")',
-    'subject:("your bill" OR "monthly bill" OR "annual bill" OR "bill is ready" OR "bill due")',
-    'subject:(billed OR "auto-billed" OR "billing statement")',
-    // -- Vendor-aware sender patterns + payment subject --
-    'from:(billing OR receipts OR invoice OR "no-reply" OR noreply OR notifications) subject:(payment OR invoice OR receipt OR subscription OR fatura OR ödeme OR üyelik)',
-    // -- Vendor-specific senders that ALWAYS send subscription mails --
-    'from:(no_reply@email.apple.com OR no-reply@spotify.com OR info@spotify.com)',
-    'from:(account-update@amazon.com OR no-reply@amazon.com) subject:(subscription OR "prime" OR membership)',
-    'from:(noreply@github.com) subject:(invoice OR receipt OR billing OR subscription)',
-    'from:(billing@netflix.com OR info@account.netflix.com OR info@mailer.netflix.com)',
-    'from:(no-reply@google.com OR payments-noreply@google.com) subject:(subscription OR receipt OR invoice OR "google one")',
-    'from:(no-reply@hetzner.com OR robot-noreply@hetzner.com OR billing@cloudflare.com)',
-    'from:(receipts@stripe.com OR notifications@stripe.com OR no-reply@stripe.com)',
-    'from:(billing@figma.com OR billing@notion.so OR receipts@linear.app OR billing@vercel.com)',
-    // -- Gmail's own categorizer — most reliable for true purchase/sub mails --
+    // ============================================================
+    // TURKISH — renewal/membership/plan
+    // ============================================================
+    'subject:(yenilendi OR yenilenecek OR yenileniyor OR "yenileme tarihi" OR "yenileme bilgisi")',
+    'subject:("üyeliğin" OR "üyeliğiniz" OR "üyelik" OR "üyeliğimiz" OR "premium üye")',
+    'subject:("abonelik" OR "aboneliğin" OR "aboneliğiniz" OR "abonelii" OR "abone")',
+    'subject:("paketin" OR "paketiniz" OR "planiniz" OR "planın" OR "tarifeniz" OR "tarifen")',
+    'subject:("hizmet bedeli" OR "ücret" OR "ücretler" OR "ücretlendirme" OR "ücreti")',
+    // ============================================================
+    // TURKISH — payment / invoice / receipt
+    // ============================================================
+    'subject:(fatura OR faturanız OR faturan OR "fatura bilgisi" OR "fatura dönemi")',
+    'subject:(makbuz OR "e-fatura" OR "e-makbuz" OR "satış makbuzu" OR dekont)',
+    'subject:("ödeme" OR "ödemen" OR "ödemeniz" OR "ödenecek" OR "ödeniyor")',
+    'subject:("tahsil" OR "tahsilat" OR "çekildi" OR "çekilecek" OR "çekilen")',
+    'subject:("hesabınızdan" OR "hesabından" OR "kartınızdan" OR "kartından" OR "kredi kartı")',
+    'subject:("otomatik ödeme" OR "sonraki ödeme" OR "sonraki yenileme" OR "yenileme ücreti")',
+    // ============================================================
+    // ENGLISH — subscription / renewal / membership
+    // ============================================================
+    'subject:(renewed OR renewal OR "auto-renew" OR "auto-renewed" OR "auto renewal")',
+    'subject:("renews on" OR "renewal date" OR "will renew" OR "renewing soon")',
+    'subject:("your subscription" OR "subscription confirmation" OR "subscription renewed" OR "subscription update")',
+    'subject:("membership renewed" OR "membership renewal" OR "membership confirmation" OR "member benefits")',
+    'subject:("plan renewed" OR "plan renewal" OR "upgrade your plan" OR "current plan")',
+    // ============================================================
+    // ENGLISH — next charge / upcoming
+    // ============================================================
+    'subject:("next billing" OR "next charge" OR "upcoming bill" OR "upcoming charge" OR "upcoming payment")',
+    'subject:("due on" OR "due soon" OR "due tomorrow" OR "payment due" OR "bill due")',
+    'subject:("will be charged" OR "will charge" OR "will be billed" OR "will renew")',
+    // ============================================================
+    // ENGLISH — invoice / receipt / payment
+    // ============================================================
+    'subject:(invoice OR "your invoice" OR "new invoice" OR "monthly invoice" OR "invoice for")',
+    'subject:(receipt OR "your receipt" OR "order receipt" OR "payment receipt" OR "receipt for")',
+    'subject:("thank you for your payment" OR "payment received" OR "payment confirmation" OR "payment successful")',
+    'subject:("has been charged" OR "successfully charged" OR "we charged" OR "charge confirmation" OR "card charged")',
+    'subject:("your bill" OR "monthly bill" OR "annual bill" OR "bill is ready" OR "bill statement")',
+    'subject:(billed OR "auto-billed" OR "billing statement" OR "billing summary" OR "billed monthly")',
+    'subject:("monthly fee" OR "annual fee" OR "membership fee" OR "service fee" OR "yearly plan")',
+    // ============================================================
+    // ENGLISH — dunning / payment-failure (also abonelik dönüşümü)
+    // ============================================================
+    'subject:("payment failed" OR "card declined" OR "renew now" OR "action required" OR "update payment")',
+    // ============================================================
+    // VENDOR senders — known subscription mailers
+    // ============================================================
+    'from:(no_reply@email.apple.com OR no-reply@email.apple.com OR appstore@apple.com)',
+    'from:(no-reply@spotify.com OR info@spotify.com OR no-reply@spotifymail.com)',
+    'from:(account-update@amazon.com OR no-reply@amazon.com OR auto-confirm@amazon.com) subject:(subscription OR prime OR membership OR renewal)',
+    'from:(noreply@github.com OR billing@github.com) subject:(invoice OR receipt OR billing OR subscription)',
+    'from:(billing@netflix.com OR info@account.netflix.com OR info@mailer.netflix.com OR netflix.com)',
+    'from:(no-reply@google.com OR payments-noreply@google.com OR googleworkspace-noreply@google.com) subject:(subscription OR receipt OR invoice OR "google one" OR workspace OR "youtube premium")',
+    'from:(no-reply@hetzner.com OR robot-noreply@hetzner.com)',
+    'from:(billing@cloudflare.com OR noreply@cloudflare.com OR notify@cloudflare.com)',
+    'from:(receipts@stripe.com OR notifications@stripe.com OR no-reply@stripe.com OR support@stripe.com)',
+    'from:(billing@figma.com OR billing@notion.so OR receipts@linear.app OR billing@vercel.com OR billing@anthropic.com OR billing@openai.com OR receipts@openai.com)',
+    'from:(no-reply@dropbox.com OR no-reply@dropboxmail.com OR billing@dropbox.com)',
+    'from:(message@iyzico.com OR noreply@iyzico.com OR no-reply@paypal.com OR service@paypal.com OR receipts@paypal.com)',
+    'from:(no-reply@adobe.com OR mail@adobe.com OR message@adobe.com) subject:(subscription OR plan OR invoice OR receipt)',
+    'from:(no-reply@microsoft.com OR microsoft-noreply@microsoft.com OR account-security-noreply@accountprotection.microsoft.com) subject:(subscription OR "microsoft 365" OR receipt OR invoice OR "office 365")',
+    // -- TR brands
+    'from:(noreply@blutv.com.tr OR no-reply@exxen.com OR noreply@gain.com.tr OR no-reply@tabii.com OR noreply@hepsiburada.com)',
+    // -- Telcos / ISPs (TR)
+    'from:(efatura@turktelekom.com.tr OR fatura@turkcell.com.tr OR fatura@vodafone.com.tr OR ttnet@turktelekom.com.tr)',
+    // ============================================================
+    // Gmail's own categorizer — most reliable
+    // ============================================================
     'category:purchases',
-    // -- Forums: some service bills land here --
     'category:forums subject:(invoice OR receipt OR subscription OR billing OR fatura OR ödeme)',
+    'category:updates subject:(invoice OR receipt OR subscription OR billing OR fatura OR ödeme OR üyelik OR yenileme)',
   ];
 
   const tryList = async (q: string, max?: number) => {

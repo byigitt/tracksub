@@ -4,7 +4,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { schema } from '../../db/client.ts';
 import { features } from '../../env.ts';
-import { parseSubscriptionsFromText } from '../../lib/fal-llm.ts';
+import { dedupeCandidates, parseSubscriptionsFromText } from '../../lib/fal-llm.ts';
 import { computeNextBilling, type Period } from '../../lib/period.ts';
 import {
   candidateListSchema,
@@ -102,12 +102,15 @@ const parseRoutes: FastifyPluginAsync = async (app) => {
         .where(eq(schema.pasteParseJob.id, jobId));
       return reply.status(502).send({ error: result.error, jobId });
     }
+    // Paste çıktısında da brand-aware dedupe — kullanıcı birden çok aylık Spotify
+    // mailini bir kerede yapıştırabilir; tek aday göstermeliyiz.
+    const deduped = dedupeCandidates([result.candidates]);
     await app.db
       .update(schema.pasteParseJob)
-      .set({ status: 'done', candidatesJson: result.candidates })
+      .set({ status: 'done', candidatesJson: deduped })
       .where(eq(schema.pasteParseJob.id, jobId));
 
-    return { jobId, candidates: result.candidates };
+    return { jobId, candidates: deduped };
   });
 
   // GET /api/subscriptions/parse/:jobId — fetch a stored job (debug + page reload)
