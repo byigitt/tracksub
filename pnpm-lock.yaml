@@ -120,6 +120,9 @@ catalogs:
     react-dom:
       specifier: ^19.0.0
       version: 19.2.5
+    simple-icons:
+      specifier: ^16.0.0
+      version: 16.18.0
     tailwind-merge:
       specifier: ^3.5.0
       version: 3.5.0
@@ -258,6 +261,9 @@ importers:
       react-dom:
         specifier: 'catalog:'
         version: 19.2.5(react@19.2.5)
+      simple-icons:
+        specifier: 'catalog:'
+        version: 16.18.0
       tailwind-merge:
         specifier: 'catalog:'
         version: 3.5.0
@@ -4058,6 +4064,10 @@ packages:
   side-channel@1.1.0:
     resolution: {integrity: sha512-ZX99e6tRweoUXqR+VBrslhda51Nh5MTQwou5tnUDgbtyM0dBgmhEDtWGP/xbKn6hqfPRHujUNwz5fy/wbbhnpw==}
     engines: {node: '>= 0.4'}
+
+  simple-icons@16.18.0:
+    resolution: {integrity: sha512-5KbjcP456Gm1lrk+rhDuX4zFri+3lRX39IjzXAvoMAO8Ne76WlVlM+Z3kA6jdZ7+QHadgXsf++R7g2jaYVbYig==}
+    engines: {node: '>=0.12.18'}
 
   sirv@2.0.4:
     resolution: {integrity: sha512-94Bdh3cC2PKrbgSOUqTiGPWVZeSiXfKOVZNJniWoqrWrRkB1CJzBU3NEbiTsPcYy1lDsANA/THzS+9WBiy5nfQ==}
@@ -7870,6 +7880,8 @@ snapshots:
       side-channel-list: 1.0.1
       side-channel-map: 1.0.1
       side-channel-weakmap: 1.0.2
+
+  simple-icons@16.18.0: {}
 
   sirv@2.0.4:
     dependencies:

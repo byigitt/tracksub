@@ -23,6 +23,7 @@
     "radix-ui": "^1.4.3",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "simple-icons": "catalog:",
     "tailwind-merge": "catalog:",
     "tw-animate-css": "catalog:"
   },

@@ -2,6 +2,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import autoload from '@fastify/autoload';
 import Fastify from 'fastify';
+import { startCron } from './lib/cron.ts';
 import { env } from './env.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -33,6 +34,9 @@ export const buildServer = async () => {
     forceESM: true,
     dirNameRoutePrefix: false,
   });
+
+  // Cron: reminder schedule (no-op when GOOGLE creds missing).
+  startCron(app);
 
   return app;
 };

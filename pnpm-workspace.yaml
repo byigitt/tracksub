@@ -43,6 +43,7 @@ catalog:
   class-variance-authority: ^0.7.1
   lucide-react: ^0.460.0
   tw-animate-css: ^1.2.5
+  simple-icons: ^16.0.0
 
   # Dev / build
   '@types/node': ^22.10.5
