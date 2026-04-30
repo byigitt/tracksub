@@ -14,6 +14,11 @@ const required = (key: string): string => {
 
 const optional = (key: string, fallback: string): string => process.env[key] ?? fallback;
 
+const optionalNullable = (key: string): string | null => {
+  const v = process.env[key];
+  return v && v.length > 0 ? v : null;
+};
+
 export const env = {
   DATABASE_URL: required('DATABASE_URL'),
   BETTER_AUTH_SECRET: required('BETTER_AUTH_SECRET'),
@@ -21,6 +26,22 @@ export const env = {
   WEB_ORIGIN: optional('WEB_ORIGIN', 'http://localhost:3000'),
   API_PORT: Number(optional('API_PORT', '4000')),
   NODE_ENV: optional('NODE_ENV', 'development'),
+
+  // AI — fal.ai any-llm
+  FAL_KEY: optionalNullable('FAL_KEY'),
+  AI_MODEL: optional('AI_MODEL', 'google/gemini-2.5-flash'),
+
+  // Google OAuth (better-auth google social) — hem Gmail okuma hem gönderme
+  GOOGLE_CLIENT_ID: optionalNullable('GOOGLE_CLIENT_ID'),
+  GOOGLE_CLIENT_SECRET: optionalNullable('GOOGLE_CLIENT_SECRET'),
+
+  REMINDER_TZ: optional('REMINDER_TZ', 'Europe/Istanbul'),
+};
+
+export const features = {
+  ai: env.FAL_KEY !== null,
+  // Gmail OAuth tek anahtar: hem read (import) hem send (reminder) buna bağlı
+  google: env.GOOGLE_CLIENT_ID !== null && env.GOOGLE_CLIENT_SECRET !== null,
 };
 
 export type Env = typeof env;
