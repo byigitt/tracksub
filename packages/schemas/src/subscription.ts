@@ -20,6 +20,8 @@ export const subscriptionCreateSchema = z
     status: statusEnum.default('active'),
     startedAt: dateSchema.optional(),
     nextBillingAt: optionalDateSchema,
+    isTrial: z.boolean().default(false),
+    trialEndsAt: optionalDateSchema,
     notes: z.string().max(2000).optional().nullable(),
     source: sourceEnum.default('manual'),
   })
@@ -27,7 +29,11 @@ export const subscriptionCreateSchema = z
     (v) =>
       v.period !== 'custom' || (v.customPeriodDays !== null && v.customPeriodDays !== undefined),
     { message: 'customPeriodDays required when period=custom', path: ['customPeriodDays'] },
-  );
+  )
+  .refine((v) => !v.isTrial || (v.trialEndsAt !== null && v.trialEndsAt !== undefined), {
+    message: 'trialEndsAt required when isTrial=true',
+    path: ['trialEndsAt'],
+  });
 
 export type SubscriptionCreateInput = z.infer<typeof subscriptionCreateSchema>;
 
@@ -42,6 +48,8 @@ export const subscriptionUpdateSchema = z
     status: statusEnum.optional(),
     startedAt: dateSchema.optional(),
     nextBillingAt: optionalDateSchema,
+    isTrial: z.boolean().optional(),
+    trialEndsAt: optionalDateSchema,
     notes: z.string().max(2000).optional().nullable(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: 'no fields to update' });
