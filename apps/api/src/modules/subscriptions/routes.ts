@@ -17,9 +17,12 @@ const idParamsSchema = z.object({ id: z.string().min(1) });
 /** Build the DB insert row from validated create input. */
 const buildInsertRow = (userId: string, input: SubscriptionCreateInput): NewSubscription => {
   const startedAt = input.startedAt ?? new Date();
-  const nextBillingAt =
-    input.nextBillingAt ??
-    computeNextBilling(startedAt, input.period as Period, input.customPeriodDays ?? null);
+  // Trial subs do not have a renewal date — the trial-ending date drives reminders.
+  // When trial converts to paid the user edits the sub (un-checks isTrial, sets nextBillingAt).
+  const nextBillingAt = input.isTrial
+    ? null
+    : (input.nextBillingAt ??
+      computeNextBilling(startedAt, input.period as Period, input.customPeriodDays ?? null));
 
   return {
     id: randomUUID(),
@@ -33,6 +36,8 @@ const buildInsertRow = (userId: string, input: SubscriptionCreateInput): NewSubs
     status: input.status,
     startedAt,
     nextBillingAt,
+    isTrial: input.isTrial,
+    trialEndsAt: input.isTrial ? (input.trialEndsAt ?? null) : null,
     notes: input.notes ?? null,
     source: input.source,
     createdAt: new Date(),
@@ -57,9 +62,28 @@ const buildUpdateRow = (
   if (input.startedAt !== undefined) out.startedAt = input.startedAt;
   if (input.notes !== undefined) out.notes = input.notes;
 
+  // Trial fields. If isTrial is being toggled, normalize the linked dates:
+  //   - turning trial ON  → wipe nextBillingAt, trialEndsAt becomes the active target.
+  //   - turning trial OFF → wipe trialEndsAt, recompute nextBillingAt from period.
+  const willBeTrial = input.isTrial !== undefined ? input.isTrial : current.isTrial;
+  if (input.isTrial !== undefined) out.isTrial = input.isTrial;
+  if (input.trialEndsAt !== undefined) out.trialEndsAt = input.trialEndsAt;
+  if (input.isTrial === true) {
+    if (input.trialEndsAt === undefined && current.trialEndsAt === null) {
+      // Caller flipped to trial without supplying a date — schema refine will catch on create,
+      // but on update we keep current.trialEndsAt (may be null → surface upstream).
+    }
+    out.nextBillingAt = null;
+  } else if (input.isTrial === false) {
+    out.trialEndsAt = null;
+  }
+
   // nextBillingAt: if explicitly provided (incl. null), respect it. Otherwise, recompute when
   // period or startedAt changed (so user doesn't end up with a stale renewal date).
-  if (input.nextBillingAt !== undefined) {
+  // Trial subs never get a renewal date.
+  if (willBeTrial) {
+    out.nextBillingAt = null;
+  } else if (input.nextBillingAt !== undefined) {
     out.nextBillingAt = input.nextBillingAt;
   } else if (input.period !== undefined || input.startedAt !== undefined) {
     const period = (input.period ?? current.period) as Period;

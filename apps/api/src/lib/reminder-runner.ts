@@ -7,12 +7,18 @@ import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import type { FastifyBaseLogger } from 'fastify';
 import { db, schema } from '../db/client.ts';
 import { sendReminderViaGmail, type SendReminderResult } from './mailer.ts';
-import { reminderOffsetFor, REMINDER_OFFSETS, type ReminderOffset } from '@tracksub/shared';
+import {
+  type EmailTemplateKind,
+  reminderOffsetFor,
+  REMINDER_OFFSETS,
+  type ReminderOffset,
+} from '@tracksub/shared';
 
 export type ReminderOutcome = {
   subscriptionId: string;
   userId: string;
   offset: ReminderOffset;
+  template: EmailTemplateKind;
   result: 'sent' | 'skipped_duplicate' | 'failed';
   messageId?: string;
   error?: string;
@@ -37,6 +43,8 @@ export const runReminders = async (
       customPeriodDays: schema.subscription.customPeriodDays,
       status: schema.subscription.status,
       startedAt: schema.subscription.startedAt,
+      isTrial: schema.subscription.isTrial,
+      trialEndsAt: schema.subscription.trialEndsAt,
       notes: schema.subscription.notes,
       source: schema.subscription.source,
       createdAt: schema.subscription.createdAt,
@@ -47,12 +55,27 @@ export const runReminders = async (
       and(eq(schema.subscription.status, 'active'), isNotNull(schema.subscription.nextBillingAt)),
     );
 
-  type Due = { sub: (typeof subs)[number]; offset: ReminderOffset };
+  // Trial subs anchor on `trialEndsAt`; renewal subs on `nextBillingAt`. A single sub
+  // never hits both targets in the same run — trial mode wipes nextBillingAt at write time.
+  type Due = {
+    sub: (typeof subs)[number];
+    offset: ReminderOffset;
+    target: Date;
+    template: EmailTemplateKind;
+  };
   const due: Due[] = [];
   for (const s of subs) {
-    if (!s.nextBillingAt) continue;
-    const offset = reminderOffsetFor(s.nextBillingAt, now);
-    if (offset !== null) due.push({ sub: s, offset });
+    const target = s.isTrial ? s.trialEndsAt : s.nextBillingAt;
+    if (!target) continue;
+    const offset = reminderOffsetFor(target, now);
+    if (offset !== null) {
+      due.push({
+        sub: s,
+        offset,
+        target,
+        template: s.isTrial ? 'trial_ending' : 'renewal',
+      });
+    }
   }
   if (due.length === 0) {
     logger?.info({ msg: 'reminders: no due subs', checked: subs.length });
@@ -69,7 +92,7 @@ export const runReminders = async (
 
   const outcomes: ReminderOutcome[] = [];
 
-  for (const { sub, offset } of due) {
+  for (const { sub, offset, target, template } of due) {
     const user = userMap.get(sub.userId);
     if (!user) continue;
 
@@ -77,7 +100,7 @@ export const runReminders = async (
     // index on (subscriptionId, dueOffsetDays, date_trunc('day', scheduledFor))
     // means only ONE run per day per offset will get a fresh row.
     const jobId = randomUUID();
-    const scheduledFor = sub.nextBillingAt!;
+    const scheduledFor = target;
     let inserted: { id: string } | undefined;
     try {
       const rows = await db
@@ -100,6 +123,7 @@ export const runReminders = async (
         subscriptionId: sub.id,
         userId: sub.userId,
         offset,
+        template,
         result: 'skipped_duplicate',
       });
       continue;
@@ -111,9 +135,9 @@ export const runReminders = async (
       result = await sendReminderViaGmail({
         userId: sub.userId,
         to: user.email,
-        // Pass the full Subscription shape (cast satisfies the schema type).
         subscription: sub,
         daysLeft: offset,
+        template,
       });
     } catch (err) {
       result = {
@@ -133,12 +157,13 @@ export const runReminders = async (
         subscriptionId: sub.id,
         kind: 'reminder_sent',
         occurredAt: new Date(),
-        meta: { offset, messageId: result.messageId },
+        meta: { offset, template, messageId: result.messageId },
       });
       outcomes.push({
         subscriptionId: sub.id,
         userId: sub.userId,
         offset,
+        template,
         result: 'sent',
         messageId: result.messageId,
       });
@@ -151,6 +176,7 @@ export const runReminders = async (
         subscriptionId: sub.id,
         userId: sub.userId,
         offset,
+        template,
         result: 'failed',
         error: result.error,
       });
@@ -195,6 +221,8 @@ export const rollPastDueSubscriptions = async (now: Date = new Date()): Promise<
     if (!s.nextBillingAt) continue;
     if (s.nextBillingAt.getTime() >= now.getTime()) continue;
     if (s.period === 'one_time') continue;
+    // Trial subs do not auto-renew — once the trial ends the user must convert it manually.
+    if (s.isTrial) continue;
     let cursor = s.nextBillingAt;
     let safety = 5000;
     while (cursor.getTime() < now.getTime() && safety-- > 0) {

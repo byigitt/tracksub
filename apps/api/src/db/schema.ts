@@ -92,6 +92,8 @@ export const subscription = pgTable(
     status: text('status').notNull().default('active'),
     startedAt: timestamp('started_at').notNull().defaultNow(),
     nextBillingAt: timestamp('next_billing_at'),
+    isTrial: boolean('is_trial').notNull().default(false),
+    trialEndsAt: timestamp('trial_ends_at'),
     notes: text('notes'),
     source: text('source').notNull().default('manual'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -101,6 +103,7 @@ export const subscription = pgTable(
     userIdx: index('subscription_user_idx').on(t.userId),
     nextBillingIdx: index('subscription_next_billing_idx').on(t.nextBillingAt),
     userStatusIdx: index('subscription_user_status_idx').on(t.userId, t.status),
+    trialEndsIdx: index('subscription_trial_ends_idx').on(t.trialEndsAt),
   }),
 );
 

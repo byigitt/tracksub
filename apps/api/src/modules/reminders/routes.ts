@@ -78,6 +78,7 @@ const reminderRoutes: FastifyPluginAsync = async (app) => {
         to: user.email,
         subscription: sub,
         daysLeft: daysLeft ?? 0,
+        template: sub.isTrial ? 'trial_ending' : 'renewal',
       });
       if (!result.ok) return reply.status(502).send(result);
       return result;
