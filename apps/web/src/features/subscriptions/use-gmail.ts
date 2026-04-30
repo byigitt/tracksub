@@ -27,6 +27,12 @@ export type SyncResponse = {
   candidates: Candidate[];
   messageCount: number;
   subjects?: SyncSubject[];
+  batchStats?: {
+    batches: number;
+    successful: number;
+    failed: number;
+    durationMs: number;
+  };
 };
 
 export const useGmailSync = () =>

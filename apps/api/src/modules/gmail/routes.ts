@@ -3,8 +3,8 @@ import { and, eq } from 'drizzle-orm';
 import type { FastifyPluginAsync } from 'fastify';
 import { schema } from '../../db/client.ts';
 import { env, features } from '../../env.ts';
-import { parseSubscriptionsFromText } from '../../lib/fal-llm.ts';
-import { buildPromptFromMessages, fetchRecentMessages } from '../../lib/gmail-fetch.ts';
+import { parseSubscriptionsBatched } from '../../lib/fal-llm.ts';
+import { fetchRecentMessages } from '../../lib/gmail-fetch.ts';
 import { getGoogleToken, hasScope } from '../../lib/google-token.ts';
 import { gmailSyncSchema } from '../../lib/schemas.ts';
 
@@ -94,11 +94,19 @@ const gmailRoutes: FastifyPluginAsync = async (app) => {
       return { jobId: null, candidates: [], messageCount: 0, subjects };
     }
 
-    const prompt = buildPromptFromMessages(messages);
-    request.log.info(
-      { msg: 'gmail sync: sending to ai', promptChars: prompt.length },
-      'gmail sync ai start',
-    );
+    // Batch + parallelize — see parseSubscriptionsBatched for rationale.
+    const batchInputs = messages.map((m) => ({
+      id: m.id,
+      text: [
+        m.date ? `Date: ${m.date}` : '',
+        m.from ? `From: ${m.from}` : '',
+        m.subject ? `Subject: ${m.subject}` : '',
+        '',
+        m.body || m.snippet,
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    }));
 
     // Reuse the paste-parse pipeline / job table so the same /from-candidate(s)
     // confirmation endpoints work.
@@ -106,18 +114,22 @@ const gmailRoutes: FastifyPluginAsync = async (app) => {
     await app.db.insert(schema.pasteParseJob).values({
       id: jobId,
       userId,
-      inputText: prompt,
+      inputText: `[gmail batched: ${messages.length} messages]`,
       status: 'pending',
       createdAt: new Date(),
     });
 
-    const result = await parseSubscriptionsFromText(prompt, request.log);
-    if (result.error) {
+    const result = await parseSubscriptionsBatched(batchInputs, {
+      batchSize: 8,
+      concurrency: 5,
+      logger: request.log,
+    });
+    if (result.failedCount === result.batchCount && result.batchCount > 0) {
       await app.db
         .update(schema.pasteParseJob)
-        .set({ status: 'error', error: result.error })
+        .set({ status: 'error', error: 'all batches failed' })
         .where(eq(schema.pasteParseJob.id, jobId));
-      return reply.status(502).send({ error: result.error, jobId });
+      return reply.status(502).send({ error: 'all batches failed', jobId });
     }
     await app.db
       .update(schema.pasteParseJob)
@@ -148,7 +160,8 @@ const gmailRoutes: FastifyPluginAsync = async (app) => {
       {
         msg: 'gmail sync: ai done',
         candidates: result.candidates.length,
-        sample: result.candidates.slice(0, 3).map((c) => ({ name: c.name, amount: c.amount })),
+        batches: result.batchCount,
+        durationMs: result.durationMs,
       },
       'gmail sync ai done',
     );
@@ -158,6 +171,12 @@ const gmailRoutes: FastifyPluginAsync = async (app) => {
       candidates: result.candidates,
       messageCount: messages.length,
       subjects,
+      batchStats: {
+        batches: result.batchCount,
+        successful: result.successCount,
+        failed: result.failedCount,
+        durationMs: result.durationMs,
+      },
     };
   });
 

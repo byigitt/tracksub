@@ -63,13 +63,15 @@ const stripFences = (raw: string): string => {
 
 type AnyLlmResult = { output?: unknown };
 
+type Logger = {
+  info: (msg: unknown) => void;
+  warn: (msg: unknown) => void;
+  error: (msg: unknown) => void;
+};
+
 export const parseSubscriptionsFromText = async (
   text: string,
-  logger?: {
-    info: (msg: unknown) => void;
-    warn: (msg: unknown) => void;
-    error: (msg: unknown) => void;
-  },
+  logger?: Logger,
 ): Promise<{ candidates: Candidate[]; error: string | null }> => {
   if (!ensureConfigured()) {
     return { candidates: [], error: 'AI not configured (FAL_KEY missing)' };
@@ -158,4 +160,112 @@ export const parseSubscriptionsFromText = async (
     logger?.error({ msg: 'fal any-llm call failed', err: (err as Error).message });
     return { candidates: [], error: (err as Error).message };
   }
+};
+
+// ---------------------------------------------------------------------------
+// Batched, parallel parse — used by Gmail sync to keep prompts small + fast.
+//
+// Why batch: 1 prompt of 200 mails (300KB) takes ~60s and confuses the model.
+// 25 prompts of 8 mails each, 5 in parallel → ~12s wall time, much sharper output.
+// ---------------------------------------------------------------------------
+
+export type BatchInput = { id: string; text: string };
+
+const dedupeCandidates = (lists: Candidate[][]): Candidate[] => {
+  const seen = new Map<string, Candidate>();
+  for (const list of lists) {
+    for (const c of list) {
+      // Same service + amount + currency from two mails → keep highest-confidence one.
+      const key = `${c.name.toLowerCase().trim()}|${c.amount.toFixed(2)}|${c.currency}`;
+      const existing = seen.get(key);
+      if (!existing || c.confidence > existing.confidence) seen.set(key, c);
+    }
+  }
+  return [...seen.values()].sort((a, b) => b.confidence - a.confidence);
+};
+
+const chunk = <T>(arr: T[], size: number): T[][] => {
+  if (size < 1) return [arr];
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+};
+
+const runWithConcurrency = async <T, R>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T, index: number) => Promise<R>,
+): Promise<R[]> => {
+  const results: R[] = new Array(items.length);
+  let cursor = 0;
+  const runOne = async (): Promise<void> => {
+    while (true) {
+      const i = cursor++;
+      if (i >= items.length) return;
+      results[i] = await worker(items[i]!, i);
+    }
+  };
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, runOne);
+  await Promise.all(workers);
+  return results;
+};
+
+export type BatchResult = {
+  candidates: Candidate[];
+  batchCount: number;
+  successCount: number;
+  failedCount: number;
+  durationMs: number;
+};
+
+export const parseSubscriptionsBatched = async (
+  inputs: BatchInput[],
+  opts: { batchSize?: number; concurrency?: number; logger?: Logger } = {},
+): Promise<BatchResult> => {
+  const batchSize = opts.batchSize ?? 8;
+  const concurrency = opts.concurrency ?? 5;
+  const logger = opts.logger;
+  const start = Date.now();
+
+  if (inputs.length === 0) {
+    return { candidates: [], batchCount: 0, successCount: 0, failedCount: 0, durationMs: 0 };
+  }
+
+  const batches = chunk(inputs, batchSize);
+  logger?.info({
+    msg: 'fal batched parse: start',
+    inputs: inputs.length,
+    batches: batches.length,
+    batchSize,
+    concurrency,
+  });
+
+  const results = await runWithConcurrency(batches, concurrency, async (batch, idx) => {
+    const text = batch
+      .map((b, i) => `--- ITEM ${idx * batchSize + i + 1} (id=${b.id}) ---\n${b.text}`)
+      .join('\n\n');
+    return parseSubscriptionsFromText(text, logger);
+  });
+
+  const successful = results.filter((r) => r.error === null);
+  const failed = results.length - successful.length;
+  const merged = dedupeCandidates(successful.map((r) => r.candidates));
+  const durationMs = Date.now() - start;
+
+  logger?.info({
+    msg: 'fal batched parse: done',
+    candidates: merged.length,
+    batches: batches.length,
+    successful: successful.length,
+    failed,
+    durationMs,
+  });
+
+  return {
+    candidates: merged,
+    batchCount: batches.length,
+    successCount: successful.length,
+    failedCount: failed,
+    durationMs,
+  };
 };

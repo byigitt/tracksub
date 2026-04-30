@@ -33,6 +33,12 @@ function ImportPage() {
   const [candidates, setCandidates] = useState<Candidate[] | null>(null);
   const [scannedSubjects, setScannedSubjects] = useState<SyncSubject[] | null>(null);
   const [scannedCount, setScannedCount] = useState<number | null>(null);
+  const [batchStats, setBatchStats] = useState<{
+    batches: number;
+    successful: number;
+    failed: number;
+    durationMs: number;
+  } | null>(null);
   const [showScanned, setShowScanned] = useState(false);
   const parse = useParseText();
   const gmailStatus = useGmailStatus();
@@ -64,6 +70,7 @@ function ImportPage() {
   const onGmailSync = async () => {
     setScannedSubjects(null);
     setScannedCount(null);
+    setBatchStats(null);
     setCandidates(null);
     setJobId(null);
     try {
@@ -72,6 +79,7 @@ function ImportPage() {
       setCandidates(res.candidates);
       setScannedCount(res.messageCount);
       setScannedSubjects(res.subjects ?? null);
+      setBatchStats(res.batchStats ?? null);
     } catch {
       // error surfaced via gmailSync.error
     }
@@ -177,11 +185,15 @@ function ImportPage() {
               <div className="mt-4 flex flex-col gap-2 rounded-md border bg-muted/30 p-3 text-xs">
                 <div className="flex items-center gap-2">
                   <Loader2Icon className="size-3 animate-spin" />
-                  <span>Gmail'den son {days} günün maillerini alıyorum…</span>
+                  <span>
+                    Gmail'den son {days} günün (max {limit}) maillerini alıyorum…
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Loader2Icon className="size-3 animate-spin" />
-                  <span>AI buldukları tek tek inceleyecek—birkaç saniye sürebilir</span>
+                  <span>
+                    AI mailleri 8'erli paralel batch'ler halinde tarıyor (5 paralel)—~10-15 sn sürer
+                  </span>
                 </div>
               </div>
             )}
@@ -198,6 +210,13 @@ function ImportPage() {
             <CardTitle className="text-sm">
               Tarama özeti: {scannedCount} mail incelendi, {candidates?.length ?? 0} aday bulundu
             </CardTitle>
+            {batchStats && (
+              <CardDescription className="text-xs">
+                {batchStats.batches} batch · {batchStats.successful} başarılı
+                {batchStats.failed > 0 ? ` · ${batchStats.failed} başarısız` : ''} ·{' '}
+                {(batchStats.durationMs / 1000).toFixed(1)} sn
+              </CardDescription>
+            )}
             {(candidates?.length ?? 0) === 0 && scannedCount > 0 && (
               <CardDescription className="text-xs">
                 AI bu maillerden abonelik çıkaramadı. Aşağıda hangi mailleri taramış, ona bak —
