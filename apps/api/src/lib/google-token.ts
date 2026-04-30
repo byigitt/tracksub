@@ -62,5 +62,11 @@ export const getGoogleToken = async (userId: string): Promise<GoogleTokenInfo | 
 
 export const hasScope = (scopeStr: string | null, target: string): boolean => {
   if (!scopeStr) return false;
-  return scopeStr.split(/\s+/u).includes(target);
+  // better-auth stores OAuth scopes comma-separated; Google issues them space-separated
+  // in the URL fragment. Accept both delimiters defensively.
+  return scopeStr
+    .split(/[\s,]+/u)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .includes(target);
 };
