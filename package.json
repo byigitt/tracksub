@@ -1,0 +1,33 @@
+{
+  "name": "tracksub",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm -r --parallel run dev",
+    "build": "pnpm -r run build",
+    "start": "pnpm --filter @tracksub/api run start",
+    "typecheck": "pnpm -r run typecheck",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt --ignore-path .oxfmtignore .",
+    "format:check": "oxfmt --ignore-path .oxfmtignore --check .",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck",
+    "fix": "pnpm format && pnpm lint:fix",
+    "db:generate": "pnpm --filter @tracksub/api run db:generate",
+    "db:migrate": "pnpm --filter @tracksub/api run db:migrate",
+    "db:push": "pnpm --filter @tracksub/api run db:push",
+    "db:studio": "pnpm --filter @tracksub/api run db:studio",
+    "auth:generate": "pnpm --filter @tracksub/api run auth:generate"
+  },
+  "devDependencies": {
+    "@typescript/native-preview": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "typescript": "catalog:"
+  },
+  "engines": {
+    "node": ">=20.11"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

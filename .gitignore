@@ -1,0 +1,26 @@
+node_modules/
+dist/
+build/
+.cache/
+.turbo/
+.rspack/
+*.log
+*.tsbuildinfo
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Drizzle: meta klasörünü COMMIT et, sadece runtime junk yok say
+apps/api/migrations/.snapshots/
+
+.ralph
