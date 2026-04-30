@@ -106,30 +106,63 @@ export const fetchRecentMessages = async (opts: FetchOptions): Promise<FetchedMe
   const days = opts.sinceDays ?? 90;
   const sinceTs = Math.floor(Date.now() / 1000) - days * 86400;
   const baseQuery = `after:${sinceTs}`;
-  // Heuristic: subscription/billing-flavored mail. Two-phase strategy:
-  //   1. Narrow: subject/from keywords + Promotions/Updates categories
-  //   2. Fallback: just the date range (so user always gets *something* to scan)
-  const narrow =
-    '(subject:(invoice OR receipt OR subscription OR renewal OR yenileme OR fatura OR makbuz OR odeme OR üyelik OR aboneliğin OR yenilendi OR "satın alma" OR "payment" OR "charged" OR "billed") OR from:(billing OR noreply OR no-reply OR receipts OR invoice) OR category:(promotions OR updates OR purchases))';
   const limit = Math.max(1, Math.min(opts.limit ?? 200, 500));
 
-  const tryList = async (q: string) => {
-    const res = await gmail.users.messages.list({ userId: 'me', q, maxResults: limit });
+  // Multi-query keyword search. Gmail's `q` operator (server-side full-text)
+  // is faster + more precise than fetching 500 mails and filtering client-side.
+  // We dispatch several narrow queries in parallel, dedupe, then fetch metadata.
+  //
+  // Each query targets a distinct subscription "signal":
+  const subscriptionQueries: string[] = [
+    // TR yenileme/abonelik
+    'subject:(yenilendi OR yenilenecek OR "üyelik" OR "aboneliğin" OR "abonelik")',
+    // TR fatura/ödeme
+    'subject:(fatura OR makbuz OR "ödeme" OR "tahsil" OR "ödenecek")',
+    // EN renewal
+    'subject:(renewed OR renewal OR "auto-renew" OR "renews on")',
+    // EN invoice/receipt
+    'subject:(invoice OR receipt OR "thank you for your payment" OR "payment receipt")',
+    // EN charged/billed
+    'subject:("has been charged" OR "will be charged" OR "upcoming payment" OR "charge" OR billed)',
+    // Vendor sender pattern + payment-ish subject
+    'from:(billing OR receipts OR invoice OR "no-reply" OR noreply) subject:(payment OR invoice OR receipt OR fatura OR ödeme)',
+    // Google's own category — most reliable for purchase confirmations
+    'category:purchases',
+  ];
+
+  const tryList = async (q: string, max?: number) => {
+    const res = await gmail.users.messages.list({
+      userId: 'me',
+      q,
+      maxResults: Math.min(max ?? limit, 500),
+    });
     return (res.data.messages ?? []).map((m) => m.id).filter((id): id is string => Boolean(id));
   };
 
   let ids: string[] = [];
   if (opts.query) {
-    // Caller provided an explicit query — respect it verbatim.
     ids = await tryList(opts.query);
   } else {
-    ids = await tryList(`${baseQuery} ${narrow}`);
-    if (ids.length === 0) {
-      // Fallback: drop the keyword filter, just look at recent inbox.
-      ids = await tryList(`${baseQuery} category:primary`);
+    // Run all keyword queries in parallel, each capped so a single keyword
+    // can't dominate the result set. Then dedupe + cap to overall limit.
+    const perQuery = Math.max(20, Math.ceil((limit / subscriptionQueries.length) * 2));
+    const lists = await Promise.all(
+      subscriptionQueries.map((q) => tryList(`${baseQuery} ${q}`, perQuery).catch(() => [])),
+    );
+    const seen = new Set<string>();
+    for (const list of lists) {
+      for (const id of list) {
+        if (seen.has(id)) continue;
+        seen.add(id);
+        ids.push(id);
+        if (ids.length >= limit) break;
+      }
+      if (ids.length >= limit) break;
     }
+    // Last-resort fallback: if keyword search caught nothing (very empty inbox
+    // or unusual locale), at least pull Google's purchases category.
     if (ids.length === 0) {
-      ids = await tryList(baseQuery);
+      ids = await tryList(`${baseQuery} category:purchases`);
     }
   }
   if (ids.length === 0) return [];
