@@ -12,9 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedSubscriptionsRouteImport } from './routes/_authenticated.subscriptions'
+import { Route as AuthenticatedImportRouteImport } from './routes/_authenticated.import'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
 import { Route as AuthSignupRouteImport } from './routes/_auth.signup'
 import { Route as AuthSigninRouteImport } from './routes/_auth.signin'
+import { Route as AuthenticatedSubscriptionsNewRouteImport } from './routes/_authenticated.subscriptions.new'
+import { Route as AuthenticatedSubscriptionsIdRouteImport } from './routes/_authenticated.subscriptions.$id'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -28,6 +32,17 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedSubscriptionsRoute =
+  AuthenticatedSubscriptionsRouteImport.update({
+    id: '/subscriptions',
+    path: '/subscriptions',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedImportRoute = AuthenticatedImportRouteImport.update({
+  id: '/import',
+  path: '/import',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
@@ -44,18 +59,38 @@ const AuthSigninRoute = AuthSigninRouteImport.update({
   path: '/signin',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthenticatedSubscriptionsNewRoute =
+  AuthenticatedSubscriptionsNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AuthenticatedSubscriptionsRoute,
+  } as any)
+const AuthenticatedSubscriptionsIdRoute =
+  AuthenticatedSubscriptionsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedSubscriptionsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/signin': typeof AuthSigninRoute
   '/signup': typeof AuthSignupRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/import': typeof AuthenticatedImportRoute
+  '/subscriptions': typeof AuthenticatedSubscriptionsRouteWithChildren
+  '/subscriptions/$id': typeof AuthenticatedSubscriptionsIdRoute
+  '/subscriptions/new': typeof AuthenticatedSubscriptionsNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/signin': typeof AuthSigninRoute
   '/signup': typeof AuthSignupRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/import': typeof AuthenticatedImportRoute
+  '/subscriptions': typeof AuthenticatedSubscriptionsRouteWithChildren
+  '/subscriptions/$id': typeof AuthenticatedSubscriptionsIdRoute
+  '/subscriptions/new': typeof AuthenticatedSubscriptionsNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -65,12 +100,32 @@ export interface FileRoutesById {
   '/_auth/signin': typeof AuthSigninRoute
   '/_auth/signup': typeof AuthSignupRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/import': typeof AuthenticatedImportRoute
+  '/_authenticated/subscriptions': typeof AuthenticatedSubscriptionsRouteWithChildren
+  '/_authenticated/subscriptions/$id': typeof AuthenticatedSubscriptionsIdRoute
+  '/_authenticated/subscriptions/new': typeof AuthenticatedSubscriptionsNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/signin' | '/signup' | '/dashboard'
+  fullPaths:
+    | '/'
+    | '/signin'
+    | '/signup'
+    | '/dashboard'
+    | '/import'
+    | '/subscriptions'
+    | '/subscriptions/$id'
+    | '/subscriptions/new'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/signin' | '/signup' | '/dashboard'
+  to:
+    | '/'
+    | '/signin'
+    | '/signup'
+    | '/dashboard'
+    | '/import'
+    | '/subscriptions'
+    | '/subscriptions/$id'
+    | '/subscriptions/new'
   id:
     | '__root__'
     | '/'
@@ -79,6 +134,10 @@ export interface FileRouteTypes {
     | '/_auth/signin'
     | '/_auth/signup'
     | '/_authenticated/dashboard'
+    | '/_authenticated/import'
+    | '/_authenticated/subscriptions'
+    | '/_authenticated/subscriptions/$id'
+    | '/_authenticated/subscriptions/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -110,6 +169,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/subscriptions': {
+      id: '/_authenticated/subscriptions'
+      path: '/subscriptions'
+      fullPath: '/subscriptions'
+      preLoaderRoute: typeof AuthenticatedSubscriptionsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/import': {
+      id: '/_authenticated/import'
+      path: '/import'
+      fullPath: '/import'
+      preLoaderRoute: typeof AuthenticatedImportRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -131,6 +204,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSigninRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_authenticated/subscriptions/new': {
+      id: '/_authenticated/subscriptions/new'
+      path: '/new'
+      fullPath: '/subscriptions/new'
+      preLoaderRoute: typeof AuthenticatedSubscriptionsNewRouteImport
+      parentRoute: typeof AuthenticatedSubscriptionsRoute
+    }
+    '/_authenticated/subscriptions/$id': {
+      id: '/_authenticated/subscriptions/$id'
+      path: '/$id'
+      fullPath: '/subscriptions/$id'
+      preLoaderRoute: typeof AuthenticatedSubscriptionsIdRouteImport
+      parentRoute: typeof AuthenticatedSubscriptionsRoute
+    }
   }
 }
 
@@ -146,12 +233,32 @@ const AuthRouteChildren: AuthRouteChildren = {
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
+interface AuthenticatedSubscriptionsRouteChildren {
+  AuthenticatedSubscriptionsIdRoute: typeof AuthenticatedSubscriptionsIdRoute
+  AuthenticatedSubscriptionsNewRoute: typeof AuthenticatedSubscriptionsNewRoute
+}
+
+const AuthenticatedSubscriptionsRouteChildren: AuthenticatedSubscriptionsRouteChildren =
+  {
+    AuthenticatedSubscriptionsIdRoute: AuthenticatedSubscriptionsIdRoute,
+    AuthenticatedSubscriptionsNewRoute: AuthenticatedSubscriptionsNewRoute,
+  }
+
+const AuthenticatedSubscriptionsRouteWithChildren =
+  AuthenticatedSubscriptionsRoute._addFileChildren(
+    AuthenticatedSubscriptionsRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedImportRoute: typeof AuthenticatedImportRoute
+  AuthenticatedSubscriptionsRoute: typeof AuthenticatedSubscriptionsRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedImportRoute: AuthenticatedImportRoute,
+  AuthenticatedSubscriptionsRoute: AuthenticatedSubscriptionsRouteWithChildren,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

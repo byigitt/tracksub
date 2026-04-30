@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { createFileRoute, useRouter } from '@tanstack/react-router';
+import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
+import { ListIcon, SparklesIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -37,6 +38,19 @@ function DashboardPage() {
             Çıkış yap
           </Button>
         </div>
+      </div>
+
+      <div className="mb-6 flex flex-wrap gap-2">
+        <Button asChild variant="outline">
+          <Link to="/subscriptions">
+            <ListIcon /> Aboneliklerim
+          </Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link to="/import">
+            <SparklesIcon /> Mailden içe aktar
+          </Link>
+        </Button>
       </div>
 
       <Card>
