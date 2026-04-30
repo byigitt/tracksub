@@ -4,7 +4,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { schema } from '../../db/client.ts';
 import { features } from '../../env.ts';
-import { computeNextBilling, type Period } from '@tracksub/shared';
+import { computeNextBilling, rollForward, type Period } from '@tracksub/shared';
 import {
   candidateListSchema,
   fromCandidateSchema,
@@ -32,15 +32,26 @@ const subscriptionFromCandidate = (
   //  - upcoming: startedAt = today (we'll know real start when first charge fires)
   //  - offer: startedAt = today (best guess)
   // nextBillingAt:
-  //  - if AI gave one, use it
+  //  - if AI gave one, use it as a base
   //  - else if lastChargedDate known, compute from it + period
   //  - else compute from startedAt
+  // Sonra her durumda geleceğe roll-forward yap — eski mailden gelen son tahsilat
+  // tarihi aylar öncesine işaret edebilir; aboneliği eklerken "sonraki yenileme"
+  // her zaman bugünden sonra olmalı, aksi halde UI "X gün gecikti" gösterir.
   const lastCharged = parseIsoDate(c.lastChargedDate);
   const aiNext = parseIsoDate(c.nextBillingDate);
   const startedAt = c.kind === 'existing' && lastCharged ? lastCharged : new Date();
-  const next =
-    aiNext ??
-    computeNextBilling(lastCharged ?? startedAt, c.period as Period, c.customPeriodDays ?? null);
+  const period = c.period as Period;
+  const customDays = c.customPeriodDays ?? null;
+  const baseNext =
+    aiNext ?? computeNextBilling(lastCharged ?? startedAt, period, customDays);
+  // one_time — tek seferlik, yenileme yok; AI ne verdiyse onu kullan (null da olabilir).
+  // Diğer periyotlarda baseNext gerişteyse rollForward ile geleceğe yuvarla — aksi
+  // halde UI "X gün gecikti" gösterir, oysa biz aboneliği sonraki dönem için ekliyoruz.
+  const next: Date | null =
+    period === 'one_time' || baseNext === null
+      ? baseNext
+      : (rollForward(baseNext, period, customDays) ?? baseNext);
 
   const noteParts: string[] = [];
   if (c.evidence) noteParts.push(`AI: ${c.evidence}`);
