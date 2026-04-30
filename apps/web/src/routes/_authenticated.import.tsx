@@ -1,10 +1,17 @@
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
-import { SparklesIcon } from 'lucide-react';
+import { CheckCircle2Icon, MailIcon, SparklesIcon, UnlinkIcon } from 'lucide-react';
 import { useState } from 'react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { signIn } from '@/lib/auth-client';
 import { CandidatesList } from '@/features/subscriptions/candidates-list';
+import {
+  useGmailDisconnect,
+  useGmailStatus,
+  useGmailSync,
+} from '@/features/subscriptions/use-gmail';
 import { useParseText, type Candidate } from '@/features/subscriptions/use-parse-text';
 
 export const Route = createFileRoute('/_authenticated/import')({
@@ -17,6 +24,10 @@ function ImportPage() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<Candidate[] | null>(null);
   const parse = useParseText();
+  const gmailStatus = useGmailStatus();
+  const gmailSync = useGmailSync();
+  const gmailDisconnect = useGmailDisconnect();
+  const [days, setDays] = useState(90);
 
   const onAnalyze = async () => {
     if (text.trim().length < 10) return;
@@ -29,6 +40,23 @@ function ImportPage() {
     }
   };
 
+  const onConnectGoogle = async () => {
+    await signIn.social({
+      provider: 'google',
+      callbackURL: window.location.href,
+    });
+  };
+
+  const onGmailSync = async () => {
+    try {
+      const res = await gmailSync.mutateAsync(days);
+      setJobId(res.jobId);
+      setCandidates(res.candidates);
+    } catch {
+      // error surfaced via gmailSync.error
+    }
+  };
+
   return (
     <div className="mx-auto max-w-2xl px-6 py-10">
       <Link to="/subscriptions" className="text-xs text-muted-foreground hover:text-foreground">
@@ -38,10 +66,77 @@ function ImportPage() {
       <header className="mt-3 mb-6">
         <h1 className="text-2xl font-semibold tracking-tight">Mailden içe aktar</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Bir abonelik mailini (Netflix yenileme, Spotify makbuzu, vb.) yapıştır. AI çıkarsın, sen
-          onayla.
+          Bir abonelik mailini yapıştır ya da Gmail'i bağlayıp son maillerden tarat. AI çıkarsın,
+          sen onayla.
         </p>
       </header>
+
+      {gmailStatus.data?.configured && (
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MailIcon className="size-4" /> Gmail
+              {gmailStatus.data.linked && (
+                <Badge variant="muted" className="gap-1">
+                  <CheckCircle2Icon className="size-3" /> Bağlı
+                </Badge>
+              )}
+            </CardTitle>
+            <CardDescription>
+              Son {days} gündeki abonelik benzeri mailleri alıp AI ile tarayalım. Hiçbir mail
+              kaydedilmez — sadece adaylar listelenir.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!gmailStatus.data.linked && <Button onClick={onConnectGoogle}>Gmail'i bağla</Button>}
+            {gmailStatus.data.linked && !gmailStatus.data.canRead && (
+              <div className="flex flex-col gap-2">
+                <p className="text-sm text-destructive">
+                  Gmail okuma izni eksik. Bağlantıyı yenilemen gerekiyor.
+                </p>
+                <Button onClick={onConnectGoogle}>Gmail iznini yenile</Button>
+              </div>
+            )}
+            {gmailStatus.data.linked && gmailStatus.data.canRead && (
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="days" className="text-xs text-muted-foreground">
+                    Geçmiş gün sayısı
+                  </label>
+                  <input
+                    id="days"
+                    type="number"
+                    min={7}
+                    max={365}
+                    value={days}
+                    onChange={(e) => setDays(Math.max(1, Number(e.target.value) || 1))}
+                    className="h-9 w-24 rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  />
+                </div>
+                <Button onClick={onGmailSync} disabled={gmailSync.isPending}>
+                  <SparklesIcon /> {gmailSync.isPending ? 'Maillere bakılıyor…' : 'Maillerden tara'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => gmailDisconnect.mutateAsync()}
+                  disabled={gmailDisconnect.isPending}
+                >
+                  <UnlinkIcon /> Bağlantıyı kaldır
+                </Button>
+                {gmailStatus.data.lastSyncedAt && (
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    Son tarama: {new Date(gmailStatus.data.lastSyncedAt).toLocaleString('tr-TR')}
+                  </span>
+                )}
+              </div>
+            )}
+            {gmailSync.error && (
+              <p className="mt-2 text-sm text-destructive">{(gmailSync.error as Error).message}</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

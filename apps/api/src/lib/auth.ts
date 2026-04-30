@@ -1,7 +1,15 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { db } from '../db/client.ts';
-import { env } from '../env.ts';
+import { env, features } from '../env.ts';
+
+// Gmail scope'lar: hem mailleri okumak (import) hem de hatırlatıcı mail göndermek (reminder).
+const GOOGLE_SCOPES = [
+  'https://www.googleapis.com/auth/gmail.readonly',
+  'https://www.googleapis.com/auth/gmail.send',
+  'https://www.googleapis.com/auth/userinfo.email',
+  'https://www.googleapis.com/auth/userinfo.profile',
+];
 
 export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
@@ -14,6 +22,25 @@ export const auth = betterAuth({
     autoSignIn: true,
     minPasswordLength: 8,
     maxPasswordLength: 128,
+  },
+
+  socialProviders: features.google
+    ? {
+        google: {
+          clientId: env.GOOGLE_CLIENT_ID!,
+          clientSecret: env.GOOGLE_CLIENT_SECRET!,
+          scope: GOOGLE_SCOPES,
+          accessType: 'offline',
+          prompt: 'consent',
+        },
+      }
+    : undefined,
+
+  account: {
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ['google'],
+    },
   },
 
   session: {
