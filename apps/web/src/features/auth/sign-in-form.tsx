@@ -26,7 +26,7 @@ export const SignInForm = () => {
       // Router beforeLoad'ları yeni context ile yeniden çalıştır
       await router.invalidate();
       // Dashboard'a götür — _authenticated guard artık cache'ten session'ı görecek
-      await router.navigate({ to: '/dashboard' });
+      await router.navigate({ to: '/app' });
     },
   });
 

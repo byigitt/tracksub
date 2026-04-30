@@ -1,4 +1,5 @@
 import { Outlet, createFileRoute, redirect } from '@tanstack/react-router';
+import { AppShell } from '@/components/app-shell';
 import { sessionQueryOptions } from '@/features/auth/use-session';
 
 export const Route = createFileRoute('/_authenticated')({
@@ -16,8 +17,8 @@ export const Route = createFileRoute('/_authenticated')({
 
 function AuthedLayout() {
   return (
-    <main className="min-h-screen bg-background">
+    <AppShell>
       <Outlet />
-    </main>
+    </AppShell>
   );
 }

@@ -23,7 +23,7 @@ export const SignUpForm = () => {
       }
       await queryClient.refetchQueries({ queryKey: sessionQueryKey });
       await router.invalidate();
-      await router.navigate({ to: '/dashboard' });
+      await router.navigate({ to: '/app' });
     },
   });
 
