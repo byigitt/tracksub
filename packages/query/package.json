@@ -1,0 +1,42 @@
+{
+  "name": "@tracksub/query",
+  "version": "0.0.0",
+  "private": true,
+  "files": [
+    "dist",
+    "src"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "react-native": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsgo --build",
+    "dev": "tsgo --build --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsgo --noEmit"
+  },
+  "dependencies": {
+    "@tracksub/api-client": "workspace:*",
+    "@tracksub/shared": "workspace:*",
+    "clsx": "catalog:",
+    "tailwind-merge": "catalog:"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "catalog:",
+    "@types/react": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "react": "catalog:",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "catalog:",
+    "react": "catalog:"
+  }
+}
