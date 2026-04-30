@@ -73,11 +73,31 @@ const gmailRoutes: FastifyPluginAsync = async (app) => {
       return reply.status(502).send({ error: `gmail fetch: ${(err as Error).message}` });
     }
 
+    request.log.info(
+      {
+        msg: 'gmail sync: fetched messages',
+        count: messages.length,
+        days: parsed.data.days,
+        subjects: messages.map((m) => m.subject ?? '(no subject)').slice(0, 50),
+      },
+      'gmail sync fetched',
+    );
+
+    const subjects = messages.map((m) => ({
+      subject: m.subject ?? '(no subject)',
+      from: m.from ?? '',
+      date: m.date ?? '',
+    }));
+
     if (messages.length === 0) {
-      return { jobId: null, candidates: [], messageCount: 0 };
+      return { jobId: null, candidates: [], messageCount: 0, subjects };
     }
 
     const prompt = buildPromptFromMessages(messages);
+    request.log.info(
+      { msg: 'gmail sync: sending to ai', promptChars: prompt.length },
+      'gmail sync ai start',
+    );
 
     // Reuse the paste-parse pipeline / job table so the same /from-candidate(s)
     // confirmation endpoints work.
@@ -123,10 +143,20 @@ const gmailRoutes: FastifyPluginAsync = async (app) => {
       });
     }
 
+    request.log.info(
+      {
+        msg: 'gmail sync: ai done',
+        candidates: result.candidates.length,
+        sample: result.candidates.slice(0, 3).map((c) => ({ name: c.name, amount: c.amount })),
+      },
+      'gmail sync ai done',
+    );
+
     return {
       jobId,
       candidates: result.candidates,
       messageCount: messages.length,
+      subjects,
     };
   });
 

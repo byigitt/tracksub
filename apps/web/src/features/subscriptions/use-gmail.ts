@@ -20,10 +20,13 @@ export const useGmailStatus = () =>
     staleTime: 30_000,
   });
 
+export type SyncSubject = { subject: string; from: string; date: string };
+
 export type SyncResponse = {
   jobId: string | null;
   candidates: Candidate[];
   messageCount: number;
+  subjects?: SyncSubject[];
 };
 
 export const useGmailSync = () =>

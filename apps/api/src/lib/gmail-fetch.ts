@@ -106,20 +106,32 @@ export const fetchRecentMessages = async (opts: FetchOptions): Promise<FetchedMe
   const days = opts.sinceDays ?? 90;
   const sinceTs = Math.floor(Date.now() / 1000) - days * 86400;
   const baseQuery = `after:${sinceTs}`;
-  // Heuristic: limit to mail that smells like billing / subscription.
-  // Note: Gmail search treats unquoted multi-word terms as AND, so we list each
-  // payment-related keyword separately rather than using quoted strings.
-  const subscriptionHints =
-    '(subject:(invoice OR receipt OR subscription OR renewal OR yenileme OR fatura OR makbuz OR odeme) OR from:(billing OR noreply OR no-reply))';
-  const q = opts.query ?? `${baseQuery} ${subscriptionHints}`;
+  // Heuristic: subscription/billing-flavored mail. Two-phase strategy:
+  //   1. Narrow: subject/from keywords + Promotions/Updates categories
+  //   2. Fallback: just the date range (so user always gets *something* to scan)
+  const narrow =
+    '(subject:(invoice OR receipt OR subscription OR renewal OR yenileme OR fatura OR makbuz OR odeme OR üyelik OR aboneliğin OR yenilendi OR "satın alma" OR "payment" OR "charged" OR "billed") OR from:(billing OR noreply OR no-reply OR receipts OR invoice) OR category:(promotions OR updates OR purchases))';
   const limit = Math.max(1, Math.min(opts.limit ?? 25, 100));
 
-  const list = await gmail.users.messages.list({
-    userId: 'me',
-    q,
-    maxResults: limit,
-  });
-  const ids = (list.data.messages ?? []).map((m) => m.id).filter((id): id is string => Boolean(id));
+  const tryList = async (q: string) => {
+    const res = await gmail.users.messages.list({ userId: 'me', q, maxResults: limit });
+    return (res.data.messages ?? []).map((m) => m.id).filter((id): id is string => Boolean(id));
+  };
+
+  let ids: string[] = [];
+  if (opts.query) {
+    // Caller provided an explicit query — respect it verbatim.
+    ids = await tryList(opts.query);
+  } else {
+    ids = await tryList(`${baseQuery} ${narrow}`);
+    if (ids.length === 0) {
+      // Fallback: drop the keyword filter, just look at recent inbox.
+      ids = await tryList(`${baseQuery} category:primary`);
+    }
+    if (ids.length === 0) {
+      ids = await tryList(baseQuery);
+    }
+  }
   if (ids.length === 0) return [];
 
   const messages: FetchedMessage[] = [];

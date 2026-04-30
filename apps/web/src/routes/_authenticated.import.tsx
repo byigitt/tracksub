@@ -1,5 +1,12 @@
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
-import { CheckCircle2Icon, MailIcon, SparklesIcon, UnlinkIcon } from 'lucide-react';
+import {
+  CheckCircle2Icon,
+  ChevronDownIcon,
+  Loader2Icon,
+  MailIcon,
+  SparklesIcon,
+  UnlinkIcon,
+} from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,6 +18,7 @@ import {
   useGmailDisconnect,
   useGmailStatus,
   useGmailSync,
+  type SyncSubject,
 } from '@/features/subscriptions/use-gmail';
 import { useParseText, type Candidate } from '@/features/subscriptions/use-parse-text';
 
@@ -23,6 +31,9 @@ function ImportPage() {
   const [text, setText] = useState('');
   const [jobId, setJobId] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<Candidate[] | null>(null);
+  const [scannedSubjects, setScannedSubjects] = useState<SyncSubject[] | null>(null);
+  const [scannedCount, setScannedCount] = useState<number | null>(null);
+  const [showScanned, setShowScanned] = useState(false);
   const parse = useParseText();
   const gmailStatus = useGmailStatus();
   const gmailSync = useGmailSync();
@@ -31,6 +42,8 @@ function ImportPage() {
 
   const onAnalyze = async () => {
     if (text.trim().length < 10) return;
+    setScannedSubjects(null);
+    setScannedCount(null);
     try {
       const res = await parse.mutateAsync(text);
       setJobId(res.jobId);
@@ -48,10 +61,16 @@ function ImportPage() {
   };
 
   const onGmailSync = async () => {
+    setScannedSubjects(null);
+    setScannedCount(null);
+    setCandidates(null);
+    setJobId(null);
     try {
       const res = await gmailSync.mutateAsync(days);
       setJobId(res.jobId);
       setCandidates(res.candidates);
+      setScannedCount(res.messageCount);
+      setScannedSubjects(res.subjects ?? null);
     } catch {
       // error surfaced via gmailSync.error
     }
@@ -114,7 +133,12 @@ function ImportPage() {
                   />
                 </div>
                 <Button onClick={onGmailSync} disabled={gmailSync.isPending}>
-                  <SparklesIcon /> {gmailSync.isPending ? 'Maillere bakılıyor…' : 'Maillerden tara'}
+                  {gmailSync.isPending ? (
+                    <Loader2Icon className="animate-spin" />
+                  ) : (
+                    <SparklesIcon />
+                  )}{' '}
+                  {gmailSync.isPending ? 'Maillere bakılıyor…' : 'Maillerden tara'}
                 </Button>
                 <Button
                   variant="ghost"
@@ -131,10 +155,64 @@ function ImportPage() {
                 )}
               </div>
             )}
+            {gmailSync.isPending && (
+              <div className="mt-4 flex flex-col gap-2 rounded-md border bg-muted/30 p-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <Loader2Icon className="size-3 animate-spin" />
+                  <span>Gmail'den son {days} günün maillerini alıyorum…</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2Icon className="size-3 animate-spin" />
+                  <span>AI buldukları tek tek inceleyecek—birkaç saniye sürebilir</span>
+                </div>
+              </div>
+            )}
             {gmailSync.error && (
               <p className="mt-2 text-sm text-destructive">{(gmailSync.error as Error).message}</p>
             )}
           </CardContent>
+        </Card>
+      )}
+
+      {scannedCount !== null && (
+        <Card className="mb-4 gap-2">
+          <CardHeader className="[.border-b]:pb-0">
+            <CardTitle className="text-sm">
+              Tarama özeti: {scannedCount} mail incelendi, {candidates?.length ?? 0} aday bulundu
+            </CardTitle>
+            {(candidates?.length ?? 0) === 0 && scannedCount > 0 && (
+              <CardDescription className="text-xs">
+                AI bu maillerden abonelik çıkaramadı. Aşağıda hangi mailleri taramış, ona bak —
+                gerçekten abonelik maili var mı?
+              </CardDescription>
+            )}
+          </CardHeader>
+          {scannedSubjects && scannedSubjects.length > 0 && (
+            <CardContent>
+              <button
+                type="button"
+                onClick={() => setShowScanned((s) => !s)}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <ChevronDownIcon
+                  className={`size-3 transition-transform ${showScanned ? 'rotate-180' : ''}`}
+                />
+                {showScanned ? 'Maili gizle' : 'Taranan mailleri gör'} ({scannedSubjects.length})
+              </button>
+              {showScanned && (
+                <ul className="mt-2 max-h-72 space-y-1 overflow-y-auto rounded-md border bg-background p-2 text-[11px]">
+                  {scannedSubjects.map((s, i) => (
+                    <li key={i} className="flex flex-col gap-0.5 border-b py-1 last:border-b-0">
+                      <span className="truncate font-medium">{s.subject}</span>
+                      <span className="truncate text-muted-foreground">
+                        {s.from} · {s.date}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          )}
         </Card>
       )}
 
