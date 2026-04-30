@@ -274,7 +274,7 @@ const ActionContent = ({
 }) => (
   <div
     className={cn(
-      'flex flex-col items-center gap-1 text-[11px] font-medium text-white transition-transform',
+      'flex flex-col items-center gap-1 text-[11px] font-medium transition-transform',
       align === 'end' ? 'ml-auto' : 'mr-auto',
       committing ? 'scale-110' : 'scale-100',
     )}

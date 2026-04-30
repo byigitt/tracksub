@@ -247,7 +247,7 @@ function AppPage() {
                 leftAction={{
                   label: 'Düzenle',
                   icon: <Pencil />,
-                  className: 'bg-primary text-primary-foreground',
+                  className: 'bg-secondary text-foreground',
                   ariaLabel: `${s.name} aboneliğini düzenle`,
                   onAction: () => setModal('edit', s.id),
                 }}
