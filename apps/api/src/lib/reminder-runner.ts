@@ -7,7 +7,7 @@ import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import type { FastifyBaseLogger } from 'fastify';
 import { db, schema } from '../db/client.ts';
 import { sendReminderViaGmail, type SendReminderResult } from './mailer.ts';
-import { reminderOffsetFor, REMINDER_OFFSETS, type ReminderOffset } from './period.ts';
+import { reminderOffsetFor, REMINDER_OFFSETS, type ReminderOffset } from '@tracksub/shared';
 
 export type ReminderOutcome = {
   subscriptionId: string;
@@ -190,7 +190,7 @@ export const rollPastDueSubscriptions = async (now: Date = new Date()): Promise<
     );
   let count = 0;
   // Local import to avoid circular type deps.
-  const { computeNextBilling } = await import('./period.ts');
+  const { computeNextBilling } = await import('@tracksub/shared');
   for (const s of due) {
     if (!s.nextBillingAt) continue;
     if (s.nextBillingAt.getTime() >= now.getTime()) continue;

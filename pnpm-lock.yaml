@@ -263,6 +263,12 @@ importers:
       '@fastify/cors':
         specifier: 'catalog:'
         version: 11.2.0
+      '@tracksub/schemas':
+        specifier: workspace:*
+        version: link:../../packages/schemas
+      '@tracksub/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       better-auth:
         specifier: 'catalog:'
         version: 1.6.9(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@types/pg@8.20.0)(gel@2.2.0)(kysely@0.28.16)(pg@8.20.0))(pg@8.20.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)

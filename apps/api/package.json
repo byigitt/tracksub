@@ -21,6 +21,8 @@
     "@fal-ai/client": "catalog:",
     "@fastify/autoload": "catalog:",
     "@fastify/cors": "catalog:",
+    "@tracksub/schemas": "workspace:*",
+    "@tracksub/shared": "workspace:*",
     "better-auth": "catalog:",
     "drizzle-orm": "catalog:",
     "fastify": "catalog:",

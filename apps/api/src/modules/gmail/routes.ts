@@ -6,7 +6,7 @@ import { env, features } from '../../env.ts';
 import { parseSubscriptionsBatched } from '../../lib/fal-llm.ts';
 import { fetchRecentMessages } from '../../lib/gmail-fetch.ts';
 import { getGoogleToken, hasScope } from '../../lib/google-token.ts';
-import { gmailSyncSchema } from '../../lib/schemas.ts';
+import { gmailSyncSchema } from '@tracksub/schemas';
 
 const READ_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
 

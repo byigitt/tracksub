@@ -3,9 +3,13 @@
 // Model id is openrouter-style ("openai/gpt-4o", "google/gemini-2.5-flash", ...).
 
 import { fal } from '@fal-ai/client';
+import {
+  candidateListLenientSchema,
+  candidateSchema,
+  type CandidateInput as Candidate,
+} from '@tracksub/schemas';
+import { PERIODS, type Period } from '@tracksub/shared';
 import { env, features } from '../env.ts';
-import { candidateListLenientSchema, candidateSchema, type Candidate } from './schemas.ts';
-import { PERIODS, type Period } from './period.ts';
 
 let configured = false;
 const ensureConfigured = (): boolean => {

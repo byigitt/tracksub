@@ -4,13 +4,13 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { schema } from '../../db/client.ts';
 import type { NewSubscription, Subscription } from '../../db/schema.ts';
-import { computeNextBilling, type Period } from '../../lib/period.ts';
+import { computeNextBilling, type Period } from '@tracksub/shared';
 import {
   subscriptionCreateSchema,
   subscriptionUpdateSchema,
   type SubscriptionCreateInput,
   type SubscriptionUpdateInput,
-} from '../../lib/schemas.ts';
+} from '@tracksub/schemas';
 
 const idParamsSchema = z.object({ id: z.string().min(1) });
 

@@ -4,14 +4,14 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { schema } from '../../db/client.ts';
 import { features } from '../../env.ts';
-import { dedupeCandidates, parseSubscriptionsFromText } from '../../lib/fal-llm.ts';
-import { computeNextBilling, type Period } from '../../lib/period.ts';
+import { computeNextBilling, type Period } from '@tracksub/shared';
 import {
   candidateListSchema,
   fromCandidateSchema,
   pasteParseSchema,
-  type Candidate,
-} from '../../lib/schemas.ts';
+  type CandidateInput as Candidate,
+} from '@tracksub/schemas';
+import { dedupeCandidates, parseSubscriptionsFromText } from '../../lib/fal-llm.ts';
 
 const parseIsoDate = (s: string | null | undefined): Date | null => {
   if (!s) return null;
