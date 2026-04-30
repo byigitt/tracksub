@@ -13,16 +13,43 @@ import {
   type Candidate,
 } from '../../lib/schemas.ts';
 
+const parseIsoDate = (s: string | null | undefined): Date | null => {
+  if (!s) return null;
+  // Treat "YYYY-MM-DD" as UTC midnight to avoid timezone drift on display.
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/u);
+  if (m) return new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00Z`);
+  const t = Date.parse(s);
+  return Number.isFinite(t) ? new Date(t) : null;
+};
+
 const subscriptionFromCandidate = (
   userId: string,
   c: Candidate,
   source: 'paste' | 'gmail' = 'paste',
 ) => {
-  const startedAt = new Date();
+  // History-aware:
+  //  - existing: startedAt = lastChargedDate (or today if AI couldn't extract)
+  //  - upcoming: startedAt = today (we'll know real start when first charge fires)
+  //  - offer: startedAt = today (best guess)
+  // nextBillingAt:
+  //  - if AI gave one, use it
+  //  - else if lastChargedDate known, compute from it + period
+  //  - else compute from startedAt
+  const lastCharged = parseIsoDate(c.lastChargedDate);
+  const aiNext = parseIsoDate(c.nextBillingDate);
+  const startedAt = c.kind === 'existing' && lastCharged ? lastCharged : new Date();
   const next =
-    c.nextBillingDate && !Number.isNaN(new Date(c.nextBillingDate).getTime())
-      ? new Date(c.nextBillingDate)
-      : computeNextBilling(startedAt, c.period as Period, c.customPeriodDays ?? null);
+    aiNext ??
+    computeNextBilling(lastCharged ?? startedAt, c.period as Period, c.customPeriodDays ?? null);
+
+  const noteParts: string[] = [];
+  if (c.evidence) noteParts.push(`AI: ${c.evidence}`);
+  if (lastCharged) {
+    noteParts.push(
+      `Son tahsilat: ${lastCharged.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' })}`,
+    );
+  }
+
   return {
     id: randomUUID(),
     userId,
@@ -35,7 +62,7 @@ const subscriptionFromCandidate = (
     status: 'active' as const,
     startedAt,
     nextBillingAt: next,
-    notes: c.evidence ? `AI: ${c.evidence}` : null,
+    notes: noteParts.length > 0 ? noteParts.join(' · ') : null,
     source,
     createdAt: new Date(),
     updatedAt: new Date(),

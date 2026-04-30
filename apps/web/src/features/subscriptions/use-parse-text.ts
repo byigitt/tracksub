@@ -11,6 +11,9 @@ export type Candidate = {
   currency: string;
   period: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'one_time' | 'custom';
   customPeriodDays?: number | null;
+  /** ISO date — when the charge already happened (for kind=existing). */
+  lastChargedDate?: string | null;
+  /** ISO date — when the next charge will happen. */
   nextBillingDate?: string | null;
   confidence: number;
   evidence?: string | null;

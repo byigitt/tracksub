@@ -103,6 +103,9 @@ export const candidateSchema = z.object({
   currency: z.string().regex(/^[A-Z]{3}$/u),
   period: periodEnum,
   customPeriodDays: z.number().int().positive().max(3650).optional().nullable(),
+  /** ISO date — when AI thinks this charge ALREADY happened (existing kind). */
+  lastChargedDate: z.string().nullable().optional(),
+  /** ISO date — when AI thinks the NEXT charge will happen (upcoming/existing). */
   nextBillingDate: z.string().nullable().optional(),
   confidence: z.number().min(0).max(1),
   evidence: z.string().max(1000).optional().nullable(),

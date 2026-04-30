@@ -8,6 +8,15 @@ import { formatMoney } from './format';
 import { PERIOD_LABELS } from './types';
 import { useConfirmCandidates, type Candidate, type CandidateKind } from './use-parse-text';
 
+// Format ISO date strings (YYYY-MM-DD) as Turkish short date ("15 Nis 2026").
+// Treat YYYY-MM-DD as UTC midnight to avoid TZ drift.
+const formatTrDate = (iso: string): string => {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/u);
+  const d = m ? new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00Z`) : new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
 const confidenceTone = (n: number): { label: string; cls: string } => {
   if (n >= 0.8)
     return { label: 'Yüksek', cls: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' };
@@ -153,13 +162,38 @@ export const CandidatesList = ({ jobId, candidates, onAdded }: Props) => {
                       ? `${c.customPeriodDays ?? '?'} günde bir`
                       : PERIOD_LABELS[c.period]}
                   </span>
-                  {c.nextBillingDate && (
-                    <>
-                      <span>·</span>
-                      <span>Yenileme: {c.nextBillingDate}</span>
-                    </>
-                  )}
                 </div>
+                {(c.lastChargedDate || c.nextBillingDate) && (
+                  <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground/90">
+                    {c.lastChargedDate && (c.kind ?? 'existing') === 'existing' && (
+                      <span className="inline-flex items-center gap-1">
+                        <span className="size-1 rounded-full bg-emerald-500" />
+                        Tahsil edildi:{' '}
+                        <span className="font-medium tabular-nums text-foreground">
+                          {formatTrDate(c.lastChargedDate)}
+                        </span>
+                      </span>
+                    )}
+                    {c.nextBillingDate && (
+                      <span className="inline-flex items-center gap-1">
+                        <span
+                          className={cn(
+                            'size-1 rounded-full',
+                            (c.kind ?? 'existing') === 'upcoming'
+                              ? 'bg-sky-500'
+                              : 'bg-muted-foreground/40',
+                          )}
+                        />
+                        {(c.kind ?? 'existing') === 'upcoming'
+                          ? 'Tahsil edilecek:'
+                          : 'Sonraki yenileme:'}{' '}
+                        <span className="font-medium tabular-nums text-foreground">
+                          {formatTrDate(c.nextBillingDate)}
+                        </span>
+                      </span>
+                    )}
+                  </div>
+                )}
                 {c.evidence && (
                   <p className="line-clamp-2 text-[11px] italic text-muted-foreground/80">
                     "{c.evidence}"

@@ -17,7 +17,7 @@ const ensureConfigured = (): boolean => {
 };
 
 const SYSTEM_PROMPT = `Sen abonelik çıkarımı yapan katı bir AI asistanısın.
-Kullanıcı sana ham bir mail/metin verecek. Görevin: BU METİNDEN sadece **gerçek, yenilenen ücretli abonelikleri** JSON olarak çıkarmak.
+Kullanıcı sana ham mail metni verecek. Görevin: ücretli abonelikleri JSON olarak çıkarmak ve **kind** + **tarihler**'i doğru işaretlemek.
 
 Çıktı KESİNLİKLE şu formatta SADECE bir JSON array olmalı (markdown fence YOK, açıklama YOK):
 
@@ -29,27 +29,59 @@ Kullanıcı sana ham bir mail/metin verecek. Görevin: BU METİNDEN sadece **ger
     "currency": "TRY",
     "period": "monthly",
     "customPeriodDays": null,
+    "lastChargedDate": "2026-04-15" | null,
     "nextBillingDate": "2026-05-15" | null,
     "confidence": 0.92,
-    "evidence": "Aylık 229,99 TL"
+    "evidence": "Aylık 229,99 TL 15 Nisan'da tahsil edildi",
+    "kind": "existing"
   }
 ]
 
-ZORUNLU KURALLAR (ihlal etme):
-- **amount** ve **currency** zorunlu. Tutar veya para birimi belirsizse O ADAYI EKLEME, atla.
-- amount sayısal olmalı (string, null, "unknown" yasak). Birden fazla tutar varsa periyodik olanı al, kerelik fırsatı/iade'yi atla.
-- currency 3 harfli ISO 4217 (TRY, USD, EUR, GBP). Sembolden çıkar: ₺/TL→TRY, $→USD, €→EUR, £→GBP.
-- period: daily|weekly|monthly|quarterly|yearly|one_time|custom. Şüphedeysen monthly varsay.
+## kind — ÇOK ÖNEMLİ (3 türden BIRINI seç)
+
+- **"existing"** — Para zaten alınmış, mevcut aktif abonelik.
+  Sinyaller: "yenilendi", "tahsil edildi", "ödemen alındı", "thanks for your payment", "invoice paid", "successfully charged", "makbuz".
+
+- **"upcoming"** — Henüz alınmadı ama EDILECEK; kullanıcı zaten abone.
+  Sinyaller: "will be charged", "due on", "upcoming payment", "yenilenecek", "ödeneceiniz", "will soon be debited".
+
+- **"offer"** — Satış teklifi, upsell, reklam. Kullanıcı şu an abone DEĞİL.
+  Sinyaller: "yükseltin", "upgrade", "try free", "plan is $X/mo", "%X indirim", "sign up", "start your subscription".
+
+Kararlı olamazsan **existing** seç.
+
+## Tarihler — ÇOK ÖNEMLİ
+
+Her mailde "Date: ..." header'ı görüyorsun. Bunları ISO 8601 ("2026-04-15") formatında yaz:
+
+- **lastChargedDate** — paranın alındığı tarih.
+  - Mail metninde açık tarih varsa ("15 Nisan'da tahsil edildi") onu yaz.
+  - **kind=existing ise mail header Date'ini kullan** (mail gönderildiğinde ödeme yeni alınmış demektir).
+  - kind=upcoming/offer ise null bırak.
+
+- **nextBillingDate** — BIR SONRAKI tahsilat tarihi.
+  - kind=upcoming: mailde "will be charged on April 28" / "15 Mayıs'ta ödenecek" varsa onu.
+  - kind=existing: mailde "sonraki yenileme: 15 Mayıs" varsa onu; yoksa null bırak (server hesaplar).
+  - kind=offer: null.
+
+Tarihler ISO 8601 ("2026-04-15") formatında. Belirsizse null — tahmin etme.
+
+## Diğer kurallar
+
+- **amount** ve **currency** zorunlu. Belirsizse o adayı EKLEME, atla.
+- amount sayısal (string/null/"unknown" yasak). Birden çok tutar varsa periyodik olanı al.
+- amount = 0 anlamsız bildirim ($0.00 invoice gibi) → atla.
+- currency: ISO 4217 3 harf. ₺/TL→TRY, $→USD, €→EUR, £→GBP.
+- period: daily|weekly|monthly|quarterly|yearly|one_time|custom. Şüphedeysen monthly.
 - Türkçe ondalık virgüllü ("229,99" → 229.99).
-- **Şunlar abonelik DEĞİL — atla**:
-  - Reklam/promosyon/kampanya mailleri ("özel fırsat", "%50 indirim", "kazanma şansı", "fırsatlar")
-  - Newsletter/bülten (yazılım ürün duyuruları, blog özetleri)
-  - Sipariş/kargo/iade bildirimleri (tek seferlik alışveriş)
-  - GitHub/CI/code review/security alert mailleri
-  - Hesap açtın/sosyal medya bildirimleri/bahsetme bildirimleri
-  - Sadece bir tutar içeren rastgele bildirimler (ödeme onayı olmayan)
-- Yenilemeyi/yenilendiğini/aktif aboneliği NET gösterenler kabul. Örnek: "üyeliğin yenilendi", "X TL hesabından tahsil edildi", "renews on", "next charge", "subscription auto-renewed".
-- Hiç gerçek abonelik yoksa boş array [] döndür.
+- evidence: metinden KıSA alıntı (1 cümle).
+- **Şunlar abonelik DEĞİL — hiç çıkarma**:
+  - Sipariş/kargo/iade bildirimleri
+  - GitHub/CI/code review/security alert
+  - Hesap açtın/sosyal medya/bahsetme bildirimleri
+  - Newsletter, blog özetleri
+  - Banka/ekstre toplu özet (e-ekstre, hesap hareketi)
+- Hiç abonelik yoksa boş array [] döndür.
 - JSON dışında HİÇBİR şey yazma.`;
 
 const stripFences = (raw: string): string => {
@@ -132,6 +164,20 @@ export const parseSubscriptionsFromText = async (
       const kindRaw = typeof row.kind === 'string' ? row.kind.toLowerCase() : '';
       const kind: 'existing' | 'upcoming' | 'offer' =
         kindRaw === 'upcoming' || kindRaw === 'offer' ? kindRaw : 'existing';
+
+      // Normalize date strings: AI sometimes emits "April 15, 2026", "15 May 2026",
+      // "2026-04-15T00:00:00Z". We isolate ISO-shaped substring or fall back to
+      // Date.parse, then format as YYYY-MM-DD.
+      const normalizeDate = (v: unknown): string | null => {
+        if (typeof v !== 'string' || v.length === 0) return null;
+        const isoMatch = v.match(/(\d{4})-(\d{2})-(\d{2})/u);
+        if (isoMatch) return isoMatch[0]!;
+        const t = Date.parse(v);
+        if (!Number.isFinite(t)) return null;
+        const d = new Date(t);
+        return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+      };
+
       const candidate = {
         name: typeof row.name === 'string' ? row.name : '',
         vendor: typeof row.vendor === 'string' ? row.vendor : null,
@@ -139,7 +185,8 @@ export const parseSubscriptionsFromText = async (
         currency,
         period,
         customPeriodDays: typeof row.customPeriodDays === 'number' ? row.customPeriodDays : null,
-        nextBillingDate: typeof row.nextBillingDate === 'string' ? row.nextBillingDate : null,
+        lastChargedDate: normalizeDate(row.lastChargedDate),
+        nextBillingDate: normalizeDate(row.nextBillingDate),
         confidence:
           typeof row.confidence === 'number' ? Math.min(1, Math.max(0, row.confidence)) : 0.5,
         evidence: typeof row.evidence === 'string' ? row.evidence : null,
