@@ -31,10 +31,10 @@ export type SyncResponse = {
 
 export const useGmailSync = () =>
   useMutation({
-    mutationFn: (days: number = 90) =>
+    mutationFn: ({ days = 90, limit = 200 }: { days?: number; limit?: number } = {}) =>
       api<SyncResponse>('/api/gmail/sync', {
         method: 'POST',
-        body: JSON.stringify({ days }),
+        body: JSON.stringify({ days, limit }),
       }),
   });
 

@@ -91,7 +91,7 @@ export type FetchOptions = {
   sinceDays?: number;
   /** Optional Gmail search query (added to the date filter). */
   query?: string;
-  /** Cap on messages returned (we run AI on each → keep it modest). Default 25. */
+  /** Cap on messages returned (we run AI on each → keep it bounded). Default 200. */
   limit?: number;
 };
 
@@ -111,7 +111,7 @@ export const fetchRecentMessages = async (opts: FetchOptions): Promise<FetchedMe
   //   2. Fallback: just the date range (so user always gets *something* to scan)
   const narrow =
     '(subject:(invoice OR receipt OR subscription OR renewal OR yenileme OR fatura OR makbuz OR odeme OR üyelik OR aboneliğin OR yenilendi OR "satın alma" OR "payment" OR "charged" OR "billed") OR from:(billing OR noreply OR no-reply OR receipts OR invoice) OR category:(promotions OR updates OR purchases))';
-  const limit = Math.max(1, Math.min(opts.limit ?? 25, 100));
+  const limit = Math.max(1, Math.min(opts.limit ?? 200, 500));
 
   const tryList = async (q: string) => {
     const res = await gmail.users.messages.list({ userId: 'me', q, maxResults: limit });
@@ -140,7 +140,9 @@ export const fetchRecentMessages = async (opts: FetchOptions): Promise<FetchedMe
       const res = await gmail.users.messages.get({ userId: 'me', id, format: 'full' });
       const m = res.data;
       const headers = m.payload?.headers ?? undefined;
-      const body = extractBody(m.payload as Part | null | undefined).slice(0, 8000);
+      // Per-message body cap: smaller when limit is high so total prompt stays bounded.
+      const bodyCap = limit > 50 ? 2000 : limit > 25 ? 4000 : 8000;
+      const body = extractBody(m.payload as Part | null | undefined).slice(0, bodyCap);
       messages.push({
         id,
         threadId: m.threadId ?? id,

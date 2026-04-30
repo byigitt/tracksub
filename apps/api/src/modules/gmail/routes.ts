@@ -67,6 +67,7 @@ const gmailRoutes: FastifyPluginAsync = async (app) => {
         clientId: env.GOOGLE_CLIENT_ID!,
         clientSecret: env.GOOGLE_CLIENT_SECRET!,
         sinceDays: parsed.data.days,
+        limit: parsed.data.limit,
       });
     } catch (err) {
       request.log.error({ err: (err as Error).message }, 'gmail fetch failed');

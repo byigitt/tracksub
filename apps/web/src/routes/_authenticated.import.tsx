@@ -39,6 +39,7 @@ function ImportPage() {
   const gmailSync = useGmailSync();
   const gmailDisconnect = useGmailDisconnect();
   const [days, setDays] = useState(90);
+  const [limit, setLimit] = useState(200);
 
   const onAnalyze = async () => {
     if (text.trim().length < 10) return;
@@ -66,7 +67,7 @@ function ImportPage() {
     setCandidates(null);
     setJobId(null);
     try {
-      const res = await gmailSync.mutateAsync(days);
+      const res = await gmailSync.mutateAsync({ days, limit });
       setJobId(res.jobId);
       setCandidates(res.candidates);
       setScannedCount(res.messageCount);
@@ -120,7 +121,7 @@ function ImportPage() {
               <div className="flex flex-wrap items-end gap-3">
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="days" className="text-xs text-muted-foreground">
-                    Geçmiş gün sayısı
+                    Geçmiş gün
                   </label>
                   <input
                     id="days"
@@ -129,7 +130,24 @@ function ImportPage() {
                     max={365}
                     value={days}
                     onChange={(e) => setDays(Math.max(1, Number(e.target.value) || 1))}
-                    className="h-9 w-24 rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    className="h-9 w-20 rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="limit" className="text-xs text-muted-foreground">
+                    Maks. mail
+                  </label>
+                  <input
+                    id="limit"
+                    type="number"
+                    min={10}
+                    max={500}
+                    step={50}
+                    value={limit}
+                    onChange={(e) =>
+                      setLimit(Math.max(1, Math.min(500, Number(e.target.value) || 1)))
+                    }
+                    className="h-9 w-20 rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                   />
                 </div>
                 <Button onClick={onGmailSync} disabled={gmailSync.isPending}>
