@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { BrandIcon } from './brand-icon';
 import { daysUntil, formatDate, formatDaysLeft, formatMoney, formatPeriod } from './format';
 import { STATUS_LABELS, type Status, type Subscription } from './types';
 
@@ -33,6 +34,7 @@ export const SubscriptionCard = ({ subscription: s }: Props) => {
         'transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
       )}
     >
+      <BrandIcon name={s.name} vendor={s.vendor} size={44} className="mt-0.5" />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className={cn('text-xs font-medium', remainTone(s.nextBillingAt))}>{remain}</div>
         <div className="truncate text-base font-semibold leading-tight">{s.name}</div>
@@ -58,6 +60,7 @@ export const SubscriptionCard = ({ subscription: s }: Props) => {
 
 export const SubscriptionCardSkeleton = () => (
   <div className="flex items-stretch gap-4 rounded-lg border bg-card p-4">
+    <div className="size-11 shrink-0 animate-pulse rounded-md bg-muted" />
     <div className="flex flex-1 flex-col gap-1.5">
       <div className="h-3 w-16 animate-pulse rounded bg-muted" />
       <div className="h-4 w-32 animate-pulse rounded bg-muted" />

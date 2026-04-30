@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Field } from '@/components/field';
+import { BrandIcon } from './brand-icon';
 import {
   CURRENCIES,
   PERIOD_LABELS,
@@ -123,6 +124,20 @@ export const SubscriptionForm = ({
       }}
       className="flex flex-col gap-4"
     >
+      <form.Subscribe selector={(s) => [s.values.name, s.values.vendor] as const}>
+        {([name, vendor]) =>
+          (name?.trim() ?? '').length > 0 ? (
+            <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
+              <BrandIcon name={name} vendor={vendor} size={48} />
+              <div className="flex flex-col">
+                <span className="text-sm font-medium leading-tight">{name}</span>
+                {vendor?.trim() && <span className="text-xs text-muted-foreground">{vendor}</span>}
+              </div>
+            </div>
+          ) : null
+        }
+      </form.Subscribe>
+
       <form.Field
         name="name"
         validators={{

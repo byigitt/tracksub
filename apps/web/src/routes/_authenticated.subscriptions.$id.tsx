@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { BrandIcon } from '@/features/subscriptions/brand-icon';
 import { SubscriptionForm } from '@/features/subscriptions/subscription-form';
 import {
   useDeleteSubscription,
@@ -38,7 +39,10 @@ function EditSubscriptionPage() {
 
       <Card className="mt-3">
         <CardHeader>
-          <CardTitle>{sub.data ? sub.data.name : 'Aboneliği düzenle'}</CardTitle>
+          <div className="flex items-center gap-3">
+            {sub.data && <BrandIcon name={sub.data.name} vendor={sub.data.vendor} size={56} />}
+            <CardTitle>{sub.data ? sub.data.name : 'Aboneliği düzenle'}</CardTitle>
+          </div>
         </CardHeader>
         <CardContent>
           {sub.isPending && (

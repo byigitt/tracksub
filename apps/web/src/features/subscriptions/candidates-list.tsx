@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { BrandIcon } from './brand-icon';
 import { formatMoney } from './format';
 import { PERIOD_LABELS } from './types';
 import { useConfirmCandidates, type Candidate } from './use-parse-text';
@@ -96,6 +97,7 @@ export const CandidatesList = ({ jobId, candidates, onAdded }: Props) => {
               >
                 {(isSelected || isAdded) && <CheckIcon className="size-3" />}
               </div>
+              <BrandIcon name={c.name} vendor={c.vendor} size={36} className="mt-0.5" />
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <div className="flex items-center gap-2">
                   <span className="truncate font-medium">{c.name}</span>

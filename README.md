@@ -1,22 +1,35 @@
 # tracksub
 
-PNPM workspace monorepo. Modern stack, **maksimum DX**.
+Abonelik takibi + AI destekli mailden içe aktarma + kendi Gmail'inden hatırlatıcı. PNPM workspace monorepo, **maksimum DX**.
+
+## Özellikler
+
+- **Manuel CRUD**: ad, sağlayıcı, tutar, para birimi, periyot (günlük/haftalık/aylık/3 aylık/yıllık/tek seferlik/özel), durum, başlangıç + sonraki yenileme, not. `nextBillingAt` periyottan otomatik hesaplanır.
+- **AI paste-parse**: Bir mail metni yapıştır → [`fal-ai/any-llm`](https://fal.ai/models/fal-ai/any-llm) (default `google/gemini-2.5-flash`) → aday subscription'lar JSON çıkarımı → çoklu seçimle topluca ekle.
+- **Gmail OAuth (opsiyonel)**: `gmail.readonly` ile son N gün maili alıp aynı AI pipeline'a sok; `gmail.send` ile reminder mailini **kullanıcının kendi Gmail'inden** kendine gönder. SMTP/App Password yok — saf OAuth.
+- **Reminder cron**: `0 9 * * *` Europe/Istanbul; `nextBillingAt`'e 7/3/1/0 gün kala mail. `reminder_job` tablosundaki `unique(subId, offset, day)` index sayesinde idempotent.
+- **Dashboard**: aktif sub sayısı, aylık/yıllık toplam (currency-aware), yaklaşan 3 yenileme.
+- **Abonelikler sayfası**: durum filtresi (Tümü / Aktif / Duraklatıldı / İptal / Süresi doldu) sayaçlarla.
 
 ## Stack
 
-| Katman  | Teknoloji                                                             |
-| ------- | --------------------------------------------------------------------- |
-| Manager | pnpm workspaces + catalog (versiyonlar tek yerde)                     |
-| API     | Fastify 5, `@fastify/autoload`, `@fastify/cors`, `fastify-plugin`     |
-| Web     | React 19, Rspack 1 (SWC + React Refresh)                              |
-| Routing | **TanStack Router** (file-based, autoCodeSplitting, type-safe)        |
-| Server  | **TanStack Query** (session + me cache, staleTime 60s)                |
-| Forms   | **TanStack Form** (validators + Subscribe)                            |
-| UI      | **Tailwind CSS v4** + **shadcn/ui** (new-york, neutral, dark mode)    |
-| Icons   | lucide-react                                                          |
-| Auth    | better-auth (email/password, 7g session, autoSignIn, drizzle adapter) |
-| DB      | PostgreSQL + Drizzle ORM 0.45 + drizzle-kit migrations                |
-| Tooling | oxlint, oxfmt, **tsgo** (`@typescript/native-preview`)                |
+| Katman   | Teknoloji                                                                |
+| -------- | ------------------------------------------------------------------------ |
+| Manager  | pnpm workspaces + catalog (versiyonlar tek yerde)                        |
+| API      | Fastify 5, `@fastify/autoload`, `@fastify/cors`, `fastify-plugin`        |
+| Web      | React 19, Rspack 1 (SWC + React Refresh)                                 |
+| Routing  | **TanStack Router** (file-based, autoCodeSplitting, type-safe)           |
+| Server   | **TanStack Query** (cache + invalidation)                                |
+| Forms    | **TanStack Form** (validators + Subscribe)                               |
+| UI       | **Tailwind CSS v4** + **shadcn/ui** (new-york, neutral, dark mode)       |
+| Icons    | lucide-react                                                             |
+| Auth     | better-auth (email/password + Google OAuth, drizzle adapter, 7g session) |
+| DB       | PostgreSQL + Drizzle ORM 0.45 + drizzle-kit migrations                   |
+| AI       | `@fal-ai/client` → `fal-ai/any-llm` endpoint (model `AI_MODEL` env)      |
+| Mail     | Gmail API `users.messages.send` (`gmail.send` scope) — SMTP **yok**      |
+| Cron     | `node-cron` (sunucu boot'unda schedule)                                  |
+| Validate | `zod` 4 (transform + refine)                                             |
+| Tooling  | oxlint, oxfmt, **tsgo** (`@typescript/native-preview`)                   |
 
 ## Klasör yapısı
 
@@ -92,8 +105,18 @@ pnpm install
 
 # 2. Env
 cp .env.example .env
-# .env içindeki DATABASE_URL ve BETTER_AUTH_SECRET'i doldur:
-#   openssl rand -base64 32   →  BETTER_AUTH_SECRET
+# Zorunlu:
+#   DATABASE_URL              — Postgres bağlantısı
+#   BETTER_AUTH_SECRET        — openssl rand -base64 32
+# AI (zorunlu — paste-parse + gmail için):
+#   FAL_KEY                   — https://fal.ai/dashboard/keys
+#   AI_MODEL=google/gemini-2.5-flash   (veya openai/gpt-4o, anthropic/claude-3.5-sonnet, ...)
+# Gmail OAuth (opsiyonel — mailden içe aktarma + reminder maili için):
+#   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+#   Google Console'da Authorized redirect URI:  http://localhost:4000/api/auth/callback/google
+#   Scopes: gmail.readonly + gmail.send (better-auth provider'ı isteyecek)
+# Reminder timezone (default Europe/Istanbul):
+#   REMINDER_TZ=Europe/Istanbul
 
 # 3. Postgres ayağa kaldır
 docker run -d --name tracksub-pg \
@@ -137,6 +160,46 @@ pnpm dlx shadcn@latest add dialog dropdown-menu separator toast
 ```
 
 `components.json` zaten `new-york` style + `neutral` baseColor + lucide ikon kütüphanesi ile yapılandırıldı.
+
+## Subscription tracking akışları
+
+### 1. Manuel ekleme
+
+`Dashboard → Aboneliklerim → Yeni`. Form periyot/tutar/para birimi alır, `nextBillingAt` boşsa server hesaplar.
+
+### 2. AI ile mailden çıkarma (paste)
+
+`Dashboard → İçe aktar`. Bir mail metnini textarea'ya yapıştır → **Analiz et** → `fal-ai/any-llm` JSON aday döndürür (güven skoru rozetiyle) → çoklu seçim → **Seçilenleri ekle**. Birden çok mail tek seferde gidebilir.
+
+### 3. Gmail bind + sync
+
+Eğer `GOOGLE_CLIENT_ID/SECRET` env'de varsa, İçe aktar sayfasında **Gmail'i bağla** görünür. Tıklayınca better-auth Google provider OAuth akışı; izin verilen scope'lar:
+
+- `gmail.readonly` (mail okumak)
+- `gmail.send` (kendi kendine reminder mail atmak)
+
+Sonra **Maillerden tara** → son N gün (default 90) abonelik-anahtarlı mailler çekilir, AI'ya verilir, aynı candidate UI ile onaylanır. Token expired olursa `oauth2.refreshAccessToken()` ile otomatik yenilenir, DB güncellenir.
+
+### 4. Reminder cron
+
+Gmail bağlı + `gmail.send` scope varsa, her gün 09:00 (`REMINDER_TZ`):
+
+- Tüm aktif sub'lar için `daysUntil(nextBillingAt) ∈ {7, 3, 1, 0}` ise mail atılır.
+- `reminder_job` tablosunda `unique(subId, offset, day)` index sayesinde idempotent (aynı gün tekrar tetiklense bile bir kez gider).
+- Mail kullanıcının **kendi Gmail'inden kendine** gider — RFC 822 raw, base64url-encoded, `users.messages.send`. SMTP yok.
+- `subscription_event kind=reminder_sent` olarak audit'lenir.
+
+Dev test:
+
+```bash
+# manuel cron tetik (NODE_ENV !== production):
+curl -b cookie.txt -X POST http://localhost:4000/api/reminders/test
+
+# tek bir sub için ad-hoc reminder:
+curl -b cookie.txt -X POST http://localhost:4000/api/reminders/send \
+  -H 'Content-Type: application/json' \
+  -d '{"subscriptionId":"<uuid>","daysLeft":3}'
+```
 
 ## Tasarım kararları
 
