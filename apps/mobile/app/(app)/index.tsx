@@ -1,22 +1,32 @@
 import { useRouter } from 'expo-router';
-import { PlusIcon, SearchIcon, SettingsIcon, SparklesIcon } from 'lucide-react-native';
+import {
+  PencilIcon,
+  PlusIcon,
+  SearchIcon,
+  SettingsIcon,
+  SparklesIcon,
+  Trash2Icon,
+} from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, View } from 'react-native';
+import { Alert, FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
+import { SubscriptionActionsSheet } from '@/components/subscription-actions-sheet';
 import { SubscriptionCard, SubscriptionCardSkeleton } from '@/components/subscription-card';
 import { SummaryStrip } from '@/components/summary-strip';
+import { SwipeableRow } from '@/components/swipeable-row';
 import {
   computeSummary,
   formatDaysLeft,
   formatMoney,
   STATUS_LABELS,
   type Status,
+  type Subscription,
 } from '@tracksub/shared';
-import { useMe, useSubscriptions } from '@tracksub/query';
+import { useDeleteSubscription, useMe, useSubscriptions } from '@tracksub/query';
 import { cn } from '@/lib/utils';
 
 type Filter = 'all' | Status;
@@ -36,6 +46,27 @@ export default function HomeScreen() {
 
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
+  const [actionsId, setActionsId] = useState<string | null>(null);
+  const del = useDeleteSubscription();
+
+  const goEdit = (id: string) => router.push(`/(app)/sub/${id}`);
+
+  const confirmDelete = (s: Subscription) => {
+    Alert.alert(
+      'Silinsin mi?',
+      `“${s.name}” aboneliğinin tüm geçmişi kalıcı olarak silinecek.`,
+      [
+        { text: 'Vazgeç', style: 'cancel' },
+        {
+          text: 'Sil',
+          style: 'destructive',
+          onPress: () => {
+            void del.mutateAsync(s.id);
+          },
+        },
+      ],
+    );
+  };
 
   const counts = subs.data
     ? subs.data.reduce<Record<string, number>>((acc, s) => {
@@ -63,7 +94,24 @@ export default function HomeScreen() {
         data={filtered}
         keyExtractor={(s) => s.id}
         renderItem={({ item }) => (
-          <SubscriptionCard subscription={item} onPress={(id) => router.push(`/(app)/sub/${id}`)} />
+          <SwipeableRow
+            leftAction={{
+              label: 'Düzenle',
+              icon: PencilIcon,
+              containerClassName: 'bg-secondary',
+              contentClassName: 'text-foreground',
+              onAction: () => goEdit(item.id),
+            }}
+            rightAction={{
+              label: 'Sil',
+              icon: Trash2Icon,
+              containerClassName: 'bg-destructive',
+              contentClassName: 'text-white',
+              onAction: () => confirmDelete(item),
+            }}
+          >
+            <SubscriptionCard subscription={item} onPress={() => setActionsId(item.id)} />
+          </SwipeableRow>
         )}
         ItemSeparatorComponent={() => <View className="h-2" />}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
@@ -224,6 +272,24 @@ export default function HomeScreen() {
             </View>
           )
         }
+      />
+
+      <SubscriptionActionsSheet
+        open={Boolean(actionsId)}
+        onClose={() => setActionsId(null)}
+        subscriptionId={actionsId ?? undefined}
+        initialSubscription={
+          actionsId ? subs.data?.find((s) => s.id === actionsId) : undefined
+        }
+        onEdit={(id) => {
+          setActionsId(null);
+          goEdit(id);
+        }}
+        onDelete={(id) => {
+          const target = subs.data?.find((s) => s.id === id);
+          setActionsId(null);
+          if (target) confirmDelete(target);
+        }}
       />
     </SafeAreaView>
   );
