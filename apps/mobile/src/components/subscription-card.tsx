@@ -1,8 +1,14 @@
 import { Pressable, View } from 'react-native';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { formatDaysLeft, formatMoney, formatPeriod } from '@/features/subscriptions/format';
-import { STATUS_LABELS, type Status, type Subscription } from '@/features/subscriptions/types';
+import {
+  formatDaysLeft,
+  formatMoney,
+  formatPeriod,
+  STATUS_LABELS,
+  type Status,
+  type Subscription,
+} from '@tracksub/shared';
 import { cn } from '@/lib/utils';
 
 const statusDot: Record<Status, string> = {

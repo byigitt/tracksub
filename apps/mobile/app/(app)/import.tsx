@@ -21,14 +21,8 @@ import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { Textarea } from '@/components/ui/textarea';
 import { Segmented } from '@/components/segmented';
-import { formatMoney } from '@/features/subscriptions/format';
-import { PERIOD_LABELS } from '@/features/subscriptions/types';
-import { useGmailStatus, useGmailSync } from '@/features/subscriptions/use-gmail';
-import {
-  type Candidate,
-  useConfirmCandidates,
-  useParseText,
-} from '@/features/subscriptions/use-parse-text';
+import { formatMoney, PERIOD_LABELS, type Candidate } from '@tracksub/shared';
+import { useConfirmCandidates, useGmailStatus, useGmailSync, useParseText } from '@tracksub/query';
 import { authClient } from '@/lib/auth-client';
 import { cn } from '@/lib/utils';
 

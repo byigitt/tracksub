@@ -9,11 +9,14 @@ import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { SubscriptionCard, SubscriptionCardSkeleton } from '@/components/subscription-card';
 import { SummaryStrip } from '@/components/summary-strip';
-import { useMe } from '@/features/me/use-me';
-import { formatDaysLeft, formatMoney } from '@/features/subscriptions/format';
-import { computeSummary } from '@/features/subscriptions/summary';
-import { STATUS_LABELS, type Status } from '@/features/subscriptions/types';
-import { useSubscriptions } from '@/features/subscriptions/use-subscriptions';
+import {
+  computeSummary,
+  formatDaysLeft,
+  formatMoney,
+  STATUS_LABELS,
+  type Status,
+} from '@tracksub/shared';
+import { useMe, useSubscriptions } from '@tracksub/query';
 import { cn } from '@/lib/utils';
 
 type Filter = 'all' | Status;

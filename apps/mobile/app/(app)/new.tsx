@@ -1,7 +1,7 @@
 import { Stack, useRouter } from 'expo-router';
 import { KeyboardAvoidingView, Platform } from 'react-native';
 import { SubscriptionForm } from '@/components/subscription-form';
-import { useCreateSubscription } from '@/features/subscriptions/use-subscriptions';
+import { useCreateSubscription } from '@tracksub/query';
 
 export default function NewSubscriptionScreen() {
   const router = useRouter();

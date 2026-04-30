@@ -2,11 +2,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, View } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { SubscriptionForm } from '@/components/subscription-form';
-import {
-  useDeleteSubscription,
-  useSubscription,
-  useUpdateSubscription,
-} from '@/features/subscriptions/use-subscriptions';
+import { useDeleteSubscription, useSubscription, useUpdateSubscription } from '@tracksub/query';
 
 export default function EditSubscriptionScreen() {
   const router = useRouter();

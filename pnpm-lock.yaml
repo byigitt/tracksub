@@ -342,6 +342,18 @@ importers:
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.100.6(react@19.2.0)
+      '@tracksub/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
+      '@tracksub/query':
+        specifier: workspace:*
+        version: link:../../packages/query
+      '@tracksub/schemas':
+        specifier: workspace:*
+        version: link:../../packages/schemas
+      '@tracksub/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       better-auth:
         specifier: 'catalog:'
         version: 1.6.9(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@types/pg@8.20.0)(gel@2.2.0)(kysely@0.28.16)(pg@8.20.0))(pg@8.20.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)

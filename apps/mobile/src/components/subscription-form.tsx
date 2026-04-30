@@ -18,7 +18,7 @@ import {
   type Status,
   type Subscription,
   type SubscriptionCreateBody,
-} from '@/features/subscriptions/types';
+} from '@tracksub/shared';
 
 type Props = {
   initial?: Subscription;

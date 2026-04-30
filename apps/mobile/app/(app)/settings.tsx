@@ -5,7 +5,7 @@ import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { useMe } from '@/features/me/use-me';
+import { useMe } from '@tracksub/query';
 import { authClient } from '@/lib/auth-client';
 import { type ThemePreference, useTheme } from '@/lib/use-theme';
 import { cn } from '@/lib/utils';

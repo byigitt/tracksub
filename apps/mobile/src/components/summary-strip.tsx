@@ -1,7 +1,7 @@
 import { View } from 'react-native';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { formatMoney } from '@/features/subscriptions/format';
+import { formatMoney } from '@tracksub/shared';
 
 type Props = {
   loading: boolean;
