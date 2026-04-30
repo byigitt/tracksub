@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { PlusIcon, SearchIcon, SparklesIcon } from 'lucide-react';
+import { Pencil, PlusIcon, SearchIcon, SparklesIcon, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,21 +13,24 @@ import {
 import { useMe, useSubscriptions } from '@tracksub/query';
 import { cn } from '@/lib/utils';
 
+import { DeleteSubscriptionDialog } from '@/features/subscriptions/delete-subscription-dialog';
 import { ImportModal } from '@/features/subscriptions/import-modal';
+import { SubscriptionActionsSheet } from '@/features/subscriptions/subscription-actions-sheet';
 import {
   SubscriptionCard,
   SubscriptionCardSkeleton,
 } from '@/features/subscriptions/subscription-card';
 import { SubscriptionModal } from '@/features/subscriptions/subscription-modal';
+import { SwipeableRow } from '@/features/subscriptions/swipeable-row';
 
-type ModalSearch = 'new' | 'edit' | 'import';
+type ModalSearch = 'new' | 'edit' | 'import' | 'actions';
 
 type AppSearch = {
   modal?: ModalSearch;
   id?: string;
 };
 
-const VALID_MODALS: readonly ModalSearch[] = ['new', 'edit', 'import'] as const;
+const VALID_MODALS: readonly ModalSearch[] = ['new', 'edit', 'import', 'actions'] as const;
 
 export const Route = createFileRoute('/_authenticated/app')({
   component: AppPage,
@@ -62,6 +65,7 @@ function AppPage() {
 
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const counts = subs.data
     ? subs.data.reduce<Record<string, number>>((acc, s) => {
@@ -237,17 +241,49 @@ function AppPage() {
         {filtered.length > 0 && (
           <div className="flex flex-col gap-2">
             {filtered.map((s) => (
-              <SubscriptionCard
+              <SwipeableRow
                 key={s.id}
-                subscription={s}
-                onClick={(id) => setModal('edit', id)}
-              />
+                onTap={() => setModal('actions', s.id)}
+                leftAction={{
+                  label: 'Düzenle',
+                  icon: <Pencil />,
+                  className: 'bg-primary text-primary-foreground',
+                  ariaLabel: `${s.name} aboneliğini düzenle`,
+                  onAction: () => setModal('edit', s.id),
+                }}
+                rightAction={{
+                  label: 'Sil',
+                  icon: <Trash2 />,
+                  className: 'bg-destructive text-white',
+                  ariaLabel: `${s.name} aboneliğini sil`,
+                  onAction: () => setDeleteId(s.id),
+                }}
+              >
+                <SubscriptionCard subscription={s} />
+              </SwipeableRow>
             ))}
           </div>
         )}
       </section>
 
       {/* Modals */}
+      <SubscriptionActionsSheet
+        open={search.modal === 'actions'}
+        onOpenChange={(open) => {
+          if (!open) closeModal();
+        }}
+        subscriptionId={search.modal === 'actions' ? search.id : undefined}
+        initialSubscription={
+          search.modal === 'actions' && search.id
+            ? subs.data?.find((s) => s.id === search.id)
+            : undefined
+        }
+        onEdit={(id) => setModal('edit', id)}
+        onDelete={(id) => {
+          closeModal();
+          setDeleteId(id);
+        }}
+      />
       <SubscriptionModal
         open={search.modal === 'new' || search.modal === 'edit'}
         onOpenChange={(open) => {
@@ -261,6 +297,16 @@ function AppPage() {
           if (!open) closeModal();
         }}
       />
+      {deleteId && (
+        <DeleteSubscriptionDialog
+          open={Boolean(deleteId)}
+          onOpenChange={(open) => {
+            if (!open) setDeleteId(null);
+          }}
+          subscriptionId={deleteId}
+          onDeleted={() => setDeleteId(null)}
+        />
+      )}
     </div>
   );
 }
