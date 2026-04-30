@@ -2,6 +2,8 @@
 
 Abonelik takibi + AI destekli mailden içe aktarma + kendi Gmail'inden hatırlatıcı. PNPM workspace monorepo, **maksimum DX**.
 
+**Web** (`apps/web`) ve **mobile** (`apps/mobile`, Expo SDK 55) aynı API'yi (`apps/api`) tüketir.
+
 ## Özellikler
 
 - **Manuel CRUD**: ad, sağlayıcı, tutar, para birimi, periyot (günlük/haftalık/aylık/3 aylık/yıllık/tek seferlik/özel), durum, başlangıç + sonraki yenileme, not. `nextBillingAt` periyottan otomatik hesaplanır.
@@ -13,23 +15,25 @@ Abonelik takibi + AI destekli mailden içe aktarma + kendi Gmail'inden hatırlat
 
 ## Stack
 
-| Katman   | Teknoloji                                                                |
-| -------- | ------------------------------------------------------------------------ |
-| Manager  | pnpm workspaces + catalog (versiyonlar tek yerde)                        |
-| API      | Fastify 5, `@fastify/autoload`, `@fastify/cors`, `fastify-plugin`        |
-| Web      | React 19, Rspack 1 (SWC + React Refresh)                                 |
-| Routing  | **TanStack Router** (file-based, autoCodeSplitting, type-safe)           |
-| Server   | **TanStack Query** (cache + invalidation)                                |
-| Forms    | **TanStack Form** (validators + Subscribe)                               |
-| UI       | **Tailwind CSS v4** + **shadcn/ui** (new-york, neutral, dark mode)       |
-| Icons    | lucide-react                                                             |
-| Auth     | better-auth (email/password + Google OAuth, drizzle adapter, 7g session) |
-| DB       | PostgreSQL + Drizzle ORM 0.45 + drizzle-kit migrations                   |
-| AI       | `@fal-ai/client` → `fal-ai/any-llm` endpoint (model `AI_MODEL` env)      |
-| Mail     | Gmail API `users.messages.send` (`gmail.send` scope) — SMTP **yok**      |
-| Cron     | `node-cron` (sunucu boot'unda schedule)                                  |
-| Validate | `zod` 4 (transform + refine)                                             |
-| Tooling  | oxlint, oxfmt, **tsgo** (`@typescript/native-preview`)                   |
+| Katman   | Teknoloji                                                                                                            |
+| -------- | -------------------------------------------------------------------------------------------------------------------- |
+| Manager  | pnpm workspaces + catalog (versiyonlar tek yerde)                                                                    |
+| API      | Fastify 5, `@fastify/autoload`, `@fastify/cors`, `fastify-plugin`                                                    |
+| Web      | React 19, Rspack 1 (SWC + React Refresh)                                                                             |
+| Mobile   | **Expo SDK 55** + expo-router v5 + RN 0.85 + React 19.1                                                              |
+| Routing  | **TanStack Router** (web) / **expo-router** (mobile, file-based)                                                     |
+| Server   | **TanStack Query** (cache + invalidation)                                                                            |
+| Forms    | **TanStack Form** (validators + Subscribe)                                                                           |
+| UI (web) | **Tailwind CSS v4** + **shadcn/ui** (new-york, neutral, dark mode)                                                   |
+| UI (rn)  | **NativeWind v4** + **Tailwind v3** + **react-native-reusables**                                                     |
+| Icons    | lucide-react / lucide-react-native                                                                                   |
+| Auth     | better-auth (email/password + Google OAuth, drizzle adapter, 7g session) + `@better-auth/expo` (mobile, SecureStore) |
+| DB       | PostgreSQL + Drizzle ORM 0.45 + drizzle-kit migrations                                                               |
+| AI       | `@fal-ai/client` → `fal-ai/any-llm` endpoint (model `AI_MODEL` env)                                                  |
+| Mail     | Gmail API `users.messages.send` (`gmail.send` scope) — SMTP **yok**                                                  |
+| Cron     | `node-cron` (sunucu boot'unda schedule)                                                                              |
+| Validate | `zod` 4 (transform + refine)                                                                                         |
+| Tooling  | oxlint, oxfmt, **tsgo** (`@typescript/native-preview`)                                                               |
 
 ## Klasör yapısı
 
@@ -96,6 +100,61 @@ tracksub/
 │               │   └── use-session.ts
 │               └── me/use-me.ts
 ```
+
+## Mobile uygulama (`apps/mobile`)
+
+Expo SDK 55 tabanlı, web ile aynı API'yi tüketen iOS/Android uygulaması.
+
+### Stack
+
+- **Expo SDK 55** + **expo-router** (file-based, typed routes)
+- **NativeWind v4** + Tailwind v3.4 (web tarafının TW v4'üyle paralel — birbirine bulaşmaz)
+- **react-native-reusables** (shadcn/ui'in RN portu — `new-york`, `neutral`)
+- **TanStack Query** + **TanStack Form**
+- **`@better-auth/expo`** + `expo-secure-store` (cookie SecureStore'da; bearer plugin gerekmiyor)
+- **react-native-reanimated v4** + **gesture-handler** (Reusables peer'ı)
+- **lucide-react-native** ikonlar
+
+### Çalıştırma
+
+```bash
+# Önce API'yi başlat (apps/api porta 4000)
+pnpm --filter @tracksub/api dev
+
+# Mobile dev server (Expo Go veya dev build için)
+pnpm --filter @tracksub/mobile dev
+
+# Sim platform kısayolları:
+pnpm --filter @tracksub/mobile ios       # iOS Simulator
+pnpm --filter @tracksub/mobile android   # Android Emulator
+pnpm --filter @tracksub/mobile web       # Tarayıcı
+```
+
+#### API URL otomatik çözümü
+
+`apps/mobile/src/lib/api-url.ts` aşağıdaki sırayla API base URL'ini bulur:
+
+1. `EXPO_PUBLIC_API_URL` env var (production / EAS).
+2. Expo dev server'ın LAN IP'si (Expo Go cihazda → `http://<lan-ip>:4000`).
+3. iOS Simulator → `http://localhost:4000`, Android Emulator → `http://10.0.2.2:4000`.
+
+Gerçek cihazda Expo Go ile çalışırken API'nin `0.0.0.0` üzerinden erişilebilir olduğundan emin ol (Fastify default'u zaten public).
+
+### Mobile auth notu
+
+`@better-auth/expo` cookie'leri `expo-secure-store`'da saklar; her API isteğine `authClient.getCookie()` ile elle ekler. Bu yüzden:
+
+- API tarafında `apps/api/src/lib/auth.ts` içinde `expo()` plugin kayıtlı, `trustedOrigins` `tracksub://` ve dev'de `exp://**` içeriyor.
+- `apps/api/src/plugins/cors.ts` web origin için credentials açık, `tracksub://` / `exp://` için izinli ama credentials kapalı (cookies header üzerinden gönderiliyor).
+
+### Ekranlar
+
+- `app/(auth)/sign-in.tsx`, `app/(auth)/sign-up.tsx` — email/şifre + Google OAuth (deep link)
+- `app/(app)/index.tsx` — dashboard: greeting, summary strip, yaklaşan yenilemeler, filtre + arama, FlatList
+- `app/(app)/new.tsx` — yeni abonelik (modal presentation)
+- `app/(app)/sub/[id].tsx` — düzenle/sil (modal presentation)
+- `app/(app)/import.tsx` — yapıştır + Gmail bağla/sync (modal)
+- `app/(app)/settings.tsx` — tema (light/dark/system), çıkış
 
 ## Hızlı başlangıç
 
