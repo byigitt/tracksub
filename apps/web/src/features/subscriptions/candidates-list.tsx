@@ -136,7 +136,7 @@ export const CandidatesList = ({ jobId, candidates, onAdded }: Props) => {
               <BrandIcon name={c.name} vendor={c.vendor} size={36} className="mt-0.5" />
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <div className="flex min-w-0 flex-1 items-baseline gap-2">
+                  <div className="flex min-w-[8rem] flex-1 items-baseline gap-2 [&>span]:min-w-0">
                     <span className="truncate font-medium">{c.name}</span>
                     {c.vendor && (
                       <span className="truncate text-xs text-muted-foreground">{c.vendor}</span>
