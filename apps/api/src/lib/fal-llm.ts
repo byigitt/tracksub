@@ -129,6 +129,9 @@ export const parseSubscriptionsFromText = async (
       const period: Period = (PERIODS as readonly string[]).includes(periodRaw)
         ? (periodRaw as Period)
         : 'monthly';
+      const kindRaw = typeof row.kind === 'string' ? row.kind.toLowerCase() : '';
+      const kind: 'existing' | 'upcoming' | 'offer' =
+        kindRaw === 'upcoming' || kindRaw === 'offer' ? kindRaw : 'existing';
       const candidate = {
         name: typeof row.name === 'string' ? row.name : '',
         vendor: typeof row.vendor === 'string' ? row.vendor : null,
@@ -140,6 +143,7 @@ export const parseSubscriptionsFromText = async (
         confidence:
           typeof row.confidence === 'number' ? Math.min(1, Math.max(0, row.confidence)) : 0.5,
         evidence: typeof row.evidence === 'string' ? row.evidence : null,
+        kind,
       };
       const strict = candidateSchema.safeParse(candidate);
       if (strict.success) {

@@ -86,6 +86,15 @@ export type GmailSyncInput = z.infer<typeof gmailSyncSchema>;
 // AI candidate shape (returned from fal-llm and stored as JSONB)
 // ---------------------------------------------------------------------------
 
+// `kind` ayırımı (AI gözlemi):
+//   existing  — zaten alınmış, yenilenmiş, aktif abonelik (mailde "yenilendi", "tahsil edildi", "üyeliğin yenilendi")
+//   upcoming  — gelecekte tahsil edilecek fatura ("due on", "will be charged", "upcoming payment")
+//   offer     — reklam/upsell/teklif ("yapkıltın", "upgrade", "plan is $X/mo", "Try free")
+// UI bunları farklı gösterir; offer'lar default seçili gelmez.
+export const CANDIDATE_KINDS = ['existing', 'upcoming', 'offer'] as const;
+export type CandidateKind = (typeof CANDIDATE_KINDS)[number];
+const candidateKindEnum = z.enum(CANDIDATE_KINDS);
+
 // Strict shape used after we filter incomplete AI outputs out.
 export const candidateSchema = z.object({
   name: z.string().min(1).max(200),
@@ -97,6 +106,7 @@ export const candidateSchema = z.object({
   nextBillingDate: z.string().nullable().optional(),
   confidence: z.number().min(0).max(1),
   evidence: z.string().max(1000).optional().nullable(),
+  kind: candidateKindEnum.default('existing'),
 });
 
 export const candidateListSchema = z.array(candidateSchema);

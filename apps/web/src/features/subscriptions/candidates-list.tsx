@@ -6,13 +6,31 @@ import { cn } from '@/lib/utils';
 import { BrandIcon } from './brand-icon';
 import { formatMoney } from './format';
 import { PERIOD_LABELS } from './types';
-import { useConfirmCandidates, type Candidate } from './use-parse-text';
+import { useConfirmCandidates, type Candidate, type CandidateKind } from './use-parse-text';
 
 const confidenceTone = (n: number): { label: string; cls: string } => {
   if (n >= 0.8)
     return { label: 'Yüksek', cls: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' };
   if (n >= 0.5) return { label: 'Orta', cls: 'bg-amber-500/15 text-amber-700 dark:text-amber-400' };
   return { label: 'Düşük', cls: 'bg-muted text-muted-foreground' };
+};
+
+const kindMeta: Record<CandidateKind, { label: string; hint: string; cls: string }> = {
+  existing: {
+    label: 'Tahsil edildi',
+    hint: 'Bu ödeme zaten alınmış — mevcut, aktif bir abonelik',
+    cls: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',
+  },
+  upcoming: {
+    label: 'Tahsil edilecek',
+    hint: 'Yaklaşan tahsilat — henüz ödenmedi, ama abonesin',
+    cls: 'bg-sky-500/15 text-sky-700 dark:text-sky-400',
+  },
+  offer: {
+    label: 'Teklif',
+    hint: 'Reklam / upsell — muhtemelen abonelik değil',
+    cls: 'bg-amber-500/15 text-amber-700 dark:text-amber-500',
+  },
 };
 
 type Props = {
@@ -22,7 +40,16 @@ type Props = {
 };
 
 export const CandidatesList = ({ jobId, candidates, onAdded }: Props) => {
-  const [selected, setSelected] = useState<Set<number>>(() => new Set(candidates.map((_, i) => i)));
+  // Default-select existing/upcoming, offer'lar otomatik seçİLİ gelmez — kullanıcı
+  // mühakeme yapar.
+  const [selected, setSelected] = useState<Set<number>>(
+    () =>
+      new Set(
+        candidates
+          .map((c, i) => ((c.kind ?? 'existing') === 'offer' ? -1 : i))
+          .filter((i) => i >= 0),
+      ),
+  );
   const [added, setAdded] = useState<Set<number>>(new Set());
   const confirm = useConfirmCandidates();
 
@@ -73,6 +100,7 @@ export const CandidatesList = ({ jobId, candidates, onAdded }: Props) => {
           const isSelected = selected.has(i);
           const isAdded = added.has(i);
           const conf = confidenceTone(c.confidence);
+          const km = kindMeta[c.kind ?? 'existing'];
           return (
             <button
               type="button"
@@ -104,7 +132,14 @@ export const CandidatesList = ({ jobId, candidates, onAdded }: Props) => {
                   {c.vendor && (
                     <span className="truncate text-xs text-muted-foreground">{c.vendor}</span>
                   )}
-                  <Badge variant="outline" className={cn('ml-auto text-[10px]', conf.cls)}>
+                  <Badge
+                    variant="outline"
+                    className={cn('ml-auto text-[10px]', km.cls)}
+                    title={km.hint}
+                  >
+                    {km.label}
+                  </Badge>
+                  <Badge variant="outline" className={cn('text-[10px]', conf.cls)}>
                     {conf.label} · {(c.confidence * 100).toFixed(0)}%
                   </Badge>
                 </div>

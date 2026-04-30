@@ -2,6 +2,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import type { Subscription } from './types';
 
+export type CandidateKind = 'existing' | 'upcoming' | 'offer';
+
 export type Candidate = {
   name: string;
   vendor?: string | null;
@@ -12,6 +14,7 @@ export type Candidate = {
   nextBillingDate?: string | null;
   confidence: number;
   evidence?: string | null;
+  kind?: CandidateKind;
 };
 
 export type ParseResponse = { jobId: string; candidates: Candidate[] };
