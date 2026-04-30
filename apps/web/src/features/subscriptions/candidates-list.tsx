@@ -94,7 +94,7 @@ export const CandidatesList = ({ jobId, candidates, onAdded }: Props) => {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
           {candidates.length} aday bulundu. Seçili olanları ekleyebilirsin.
         </p>
@@ -135,34 +135,34 @@ export const CandidatesList = ({ jobId, candidates, onAdded }: Props) => {
               </div>
               <BrandIcon name={c.name} vendor={c.vendor} size={36} className="mt-0.5" />
               <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  <span className="truncate font-medium">{c.name}</span>
-                  {c.vendor && (
-                    <span className="truncate text-xs text-muted-foreground">{c.vendor}</span>
-                  )}
-                  {(c.occurrenceCount ?? 1) > 1 && (
-                    <Badge
-                      variant="muted"
-                      className="ml-auto text-[10px]"
-                      title={`Bu abonelik ${c.occurrenceCount} farklı mailde tespit edildi (muhtemelen aylık yenileme).`}
-                    >
-                      {c.occurrenceCount}×
-                    </Badge>
-                  )}
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      (c.occurrenceCount ?? 1) > 1 ? '' : 'ml-auto',
-                      'text-[10px]',
-                      km.cls,
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <div className="flex min-w-0 flex-1 items-baseline gap-2">
+                    <span className="truncate font-medium">{c.name}</span>
+                    {c.vendor && (
+                      <span className="truncate text-xs text-muted-foreground">{c.vendor}</span>
                     )}
-                    title={km.hint}
-                  >
-                    {km.label}
-                  </Badge>
-                  <Badge variant="outline" className={cn('text-[10px]', conf.cls)}>
-                    {conf.label} · {(c.confidence * 100).toFixed(0)}%
-                  </Badge>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {(c.occurrenceCount ?? 1) > 1 && (
+                      <Badge
+                        variant="muted"
+                        className="text-[10px]"
+                        title={`Bu abonelik ${c.occurrenceCount} farklı mailde tespit edildi (muhtemelen aylık yenileme).`}
+                      >
+                        {c.occurrenceCount}×
+                      </Badge>
+                    )}
+                    <Badge
+                      variant="outline"
+                      className={cn('text-[10px]', km.cls)}
+                      title={km.hint}
+                    >
+                      {km.label}
+                    </Badge>
+                    <Badge variant="outline" className={cn('text-[10px]', conf.cls)}>
+                      {conf.label} · {(c.confidence * 100).toFixed(0)}%
+                    </Badge>
+                  </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <span className="font-mono tabular-nums text-foreground">

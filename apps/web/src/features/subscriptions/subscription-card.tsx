@@ -52,14 +52,17 @@ export const SubscriptionCard = ({ subscription: s, onClick }: Props) => {
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className={cn('text-xs font-medium', remainTone(s.nextBillingAt))}>{remain}</div>
         <div className="truncate text-base font-semibold leading-tight">{s.name}</div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          {s.vendor && <span className="truncate">{s.vendor}</span>}
-          <Badge variant={statusVariant[s.status]} className="text-[10px] uppercase tracking-wide">
+        <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
+          {s.vendor && <span className="min-w-0 truncate">{s.vendor}</span>}
+          <Badge
+            variant={statusVariant[s.status]}
+            className="shrink-0 text-[10px] uppercase tracking-wide"
+          >
             {STATUS_LABELS[s.status]}
           </Badge>
         </div>
       </div>
-      <div className="flex flex-col items-end justify-between text-right">
+      <div className="flex shrink-0 flex-col items-end justify-between text-right">
         <div className="font-mono text-base font-semibold tabular-nums">
           {formatMoney(s.amount, s.currency)}
         </div>

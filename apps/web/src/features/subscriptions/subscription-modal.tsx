@@ -55,13 +55,13 @@ export const SubscriptionModal = ({ open, onOpenChange, subscriptionId, onSucces
           )}
 
           {isEdit && sub.data && (
-            <div className="-mx-6 -mb-6 mt-2 flex items-center justify-between border-t bg-muted/20 px-6 py-3">
+            <div className="-mx-6 -mb-6 mt-2 flex flex-wrap items-center justify-between gap-2 border-t bg-muted/20 px-6 py-3">
               <span className="text-xs text-muted-foreground">Bu aboneliği kalıcı olarak sil.</span>
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
                 onClick={() => setAskDelete(true)}
               >
                 Sil

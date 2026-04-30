@@ -153,7 +153,7 @@ export const ImportModal = ({ open, onOpenChange, onAdded }: Props) => {
                       {gmailSync.isPending ? 'Maillere bakılıyor…' : 'Maillerden tara'}
                     </Button>
                     {gmailStatus.data?.lastSyncedAt && (
-                      <span className="ml-auto text-xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground sm:ml-auto">
                         Son tarama:{' '}
                         {new Date(gmailStatus.data.lastSyncedAt).toLocaleString('tr-TR')}
                       </span>
@@ -302,7 +302,7 @@ const ScanSummary = ({
         {showScanned && (
           <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto rounded-md border bg-background p-2 text-[11px]">
             {scannedSubjects.map((s, i) => (
-              <li key={i} className="flex flex-col gap-0.5 border-b py-1 last:border-b-0">
+              <li key={i} className="flex min-w-0 flex-col gap-0.5 border-b py-1 last:border-b-0">
                 <span className="truncate font-medium">{s.subject}</span>
                 <span className="truncate text-muted-foreground">
                   {s.from} · {s.date}

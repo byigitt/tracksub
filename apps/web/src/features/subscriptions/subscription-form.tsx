@@ -129,9 +129,11 @@ export const SubscriptionForm = ({
           (name?.trim() ?? '').length > 0 ? (
             <div className="flex items-center gap-3 border-b pb-3">
               <BrandIcon name={name} vendor={vendor} size={40} />
-              <div className="flex flex-col">
-                <span className="text-sm font-medium leading-tight">{name}</span>
-                {vendor?.trim() && <span className="text-xs text-muted-foreground">{vendor}</span>}
+              <div className="flex min-w-0 flex-col">
+                <span className="truncate text-sm font-medium leading-tight">{name}</span>
+                {vendor?.trim() && (
+                  <span className="truncate text-xs text-muted-foreground">{vendor}</span>
+                )}
               </div>
             </div>
           ) : null

@@ -289,9 +289,12 @@ const SummaryStrip = ({ loading, activeCount, monthly, yearly }: SummaryStripPro
         ) : monthlyEntries.length === 0 ? (
           <span className="text-xl font-semibold text-muted-foreground">—</span>
         ) : (
-          <div className="flex flex-col gap-0.5">
+          <div className="flex min-w-0 flex-col gap-0.5">
             {monthlyEntries.map(([cur, amount]) => (
-              <span key={cur} className="font-mono text-base font-semibold tabular-nums sm:text-lg">
+              <span
+                key={cur}
+                className="truncate font-mono text-sm font-semibold tabular-nums sm:text-lg"
+              >
                 {formatMoney(amount, cur)}
               </span>
             ))}
@@ -304,9 +307,12 @@ const SummaryStrip = ({ loading, activeCount, monthly, yearly }: SummaryStripPro
         ) : yearlyEntries.length === 0 ? (
           <span className="text-xl font-semibold text-muted-foreground">—</span>
         ) : (
-          <div className="flex flex-col gap-0.5">
+          <div className="flex min-w-0 flex-col gap-0.5">
             {yearlyEntries.map(([cur, amount]) => (
-              <span key={cur} className="font-mono text-base font-semibold tabular-nums sm:text-lg">
+              <span
+                key={cur}
+                className="truncate font-mono text-sm font-semibold tabular-nums sm:text-lg"
+              >
                 {formatMoney(amount, cur)}
               </span>
             ))}
@@ -318,11 +324,11 @@ const SummaryStrip = ({ loading, activeCount, monthly, yearly }: SummaryStripPro
 };
 
 const SummaryCell = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div className="flex flex-col gap-1 px-3 py-3 sm:px-4 sm:py-4">
-    <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+  <div className="flex min-w-0 flex-col gap-1 px-3 py-3 sm:px-4 sm:py-4">
+    <span className="truncate text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
       {label}
     </span>
-    <div>{children}</div>
+    <div className="min-w-0">{children}</div>
   </div>
 );
 
