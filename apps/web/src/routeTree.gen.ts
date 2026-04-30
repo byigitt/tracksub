@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedEmailsRouteImport } from './routes/_authenticated.emails'
 import { Route as AuthenticatedConnectionsRouteImport } from './routes/_authenticated.connections'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated.app'
 import { Route as AuthSignupRouteImport } from './routes/_auth.signup'
@@ -29,6 +30,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedEmailsRoute = AuthenticatedEmailsRouteImport.update({
+  id: '/emails',
+  path: '/emails',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedConnectionsRoute =
   AuthenticatedConnectionsRouteImport.update({
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof AuthSignupRoute
   '/app': typeof AuthenticatedAppRoute
   '/connections': typeof AuthenticatedConnectionsRoute
+  '/emails': typeof AuthenticatedEmailsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -65,6 +72,7 @@ export interface FileRoutesByTo {
   '/signup': typeof AuthSignupRoute
   '/app': typeof AuthenticatedAppRoute
   '/connections': typeof AuthenticatedConnectionsRoute
+  '/emails': typeof AuthenticatedEmailsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -75,12 +83,13 @@ export interface FileRoutesById {
   '/_auth/signup': typeof AuthSignupRoute
   '/_authenticated/app': typeof AuthenticatedAppRoute
   '/_authenticated/connections': typeof AuthenticatedConnectionsRoute
+  '/_authenticated/emails': typeof AuthenticatedEmailsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/signin' | '/signup' | '/app' | '/connections'
+  fullPaths: '/' | '/signin' | '/signup' | '/app' | '/connections' | '/emails'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/signin' | '/signup' | '/app' | '/connections'
+  to: '/' | '/signin' | '/signup' | '/app' | '/connections' | '/emails'
   id:
     | '__root__'
     | '/'
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/_auth/signup'
     | '/_authenticated/app'
     | '/_authenticated/connections'
+    | '/_authenticated/emails'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -120,6 +130,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/emails': {
+      id: '/_authenticated/emails'
+      path: '/emails'
+      fullPath: '/emails'
+      preLoaderRoute: typeof AuthenticatedEmailsRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/connections': {
       id: '/_authenticated/connections'
@@ -167,11 +184,13 @@ const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 interface AuthenticatedRouteChildren {
   AuthenticatedAppRoute: typeof AuthenticatedAppRoute
   AuthenticatedConnectionsRoute: typeof AuthenticatedConnectionsRoute
+  AuthenticatedEmailsRoute: typeof AuthenticatedEmailsRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAppRoute: AuthenticatedAppRoute,
   AuthenticatedConnectionsRoute: AuthenticatedConnectionsRoute,
+  AuthenticatedEmailsRoute: AuthenticatedEmailsRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
