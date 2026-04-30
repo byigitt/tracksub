@@ -127,8 +127,8 @@ export const SubscriptionForm = ({
       <form.Subscribe selector={(s) => [s.values.name, s.values.vendor] as const}>
         {([name, vendor]) =>
           (name?.trim() ?? '').length > 0 ? (
-            <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
-              <BrandIcon name={name} vendor={vendor} size={48} />
+            <div className="flex items-center gap-3 border-b pb-3">
+              <BrandIcon name={name} vendor={vendor} size={40} />
               <div className="flex flex-col">
                 <span className="text-sm font-medium leading-tight">{name}</span>
                 {vendor?.trim() && <span className="text-xs text-muted-foreground">{vendor}</span>}
@@ -200,7 +200,7 @@ export const SubscriptionForm = ({
             <div className="flex flex-col gap-1.5">
               <Label className="text-sm">Para birimi</Label>
               <Select value={field.state.value} onValueChange={(v) => field.handleChange(v)}>
-                <SelectTrigger className="w-28">
+                <SelectTrigger className="w-24 sm:w-28">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

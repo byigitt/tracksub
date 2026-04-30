@@ -1,4 +1,3 @@
-import { Link } from '@tanstack/react-router';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { BrandIcon } from './brand-icon';
@@ -20,18 +19,25 @@ const remainTone = (iso: string | null): string => {
   return 'text-muted-foreground';
 };
 
-type Props = { subscription: Subscription };
+type Props = {
+  subscription: Subscription;
+  onClick?: (id: string) => void;
+};
 
 // Sade kart — renkli sol şerit YOK. Yatay layout: sol meta, sağ tutar.
-export const SubscriptionCard = ({ subscription: s }: Props) => {
+// Tıklanabilir ama parent'tan onClick alır (modal-driven UX).
+export const SubscriptionCard = ({ subscription: s, onClick }: Props) => {
   const remain = formatDaysLeft(s.nextBillingAt);
+  const interactive = Boolean(onClick);
+  const Tag = interactive ? 'button' : 'div';
   return (
-    <Link
-      to="/subscriptions/$id"
-      params={{ id: s.id }}
+    <Tag
+      type={interactive ? 'button' : undefined}
+      onClick={interactive ? () => onClick?.(s.id) : undefined}
       className={cn(
-        'group flex items-stretch gap-4 rounded-lg border bg-card p-4',
-        'transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+        'group flex w-full items-stretch gap-4 rounded-lg border bg-card p-4 text-left',
+        interactive &&
+          'transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
       )}
     >
       <BrandIcon name={s.name} vendor={s.vendor} size={44} className="mt-0.5" />
@@ -54,7 +60,7 @@ export const SubscriptionCard = ({ subscription: s }: Props) => {
         </div>
         <div className="text-[11px] text-muted-foreground/80">{formatDate(s.nextBillingAt)}</div>
       </div>
-    </Link>
+    </Tag>
   );
 };
 
