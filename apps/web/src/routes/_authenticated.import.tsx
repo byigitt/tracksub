@@ -38,6 +38,7 @@ function ImportPage() {
     successful: number;
     failed: number;
     durationMs: number;
+    gmailFetchMs?: number;
   } | null>(null);
   const [showScanned, setShowScanned] = useState(false);
   const parse = useParseText();
@@ -212,9 +213,10 @@ function ImportPage() {
             </CardTitle>
             {batchStats && (
               <CardDescription className="text-xs">
-                {batchStats.batches} batch · {batchStats.successful} başarılı
-                {batchStats.failed > 0 ? ` · ${batchStats.failed} başarısız` : ''} ·{' '}
-                {(batchStats.durationMs / 1000).toFixed(1)} sn
+                Gmail fetch: {((batchStats.gmailFetchMs ?? 0) / 1000).toFixed(1)} sn · AI:{' '}
+                {(batchStats.durationMs / 1000).toFixed(1)} sn ({batchStats.batches} batch,{' '}
+                {batchStats.successful} başarılı
+                {batchStats.failed > 0 ? `, ${batchStats.failed} başarısız` : ''})
               </CardDescription>
             )}
             {(candidates?.length ?? 0) === 0 && scannedCount > 0 && (

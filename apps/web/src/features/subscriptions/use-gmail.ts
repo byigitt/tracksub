@@ -32,6 +32,7 @@ export type SyncResponse = {
     successful: number;
     failed: number;
     durationMs: number;
+    gmailFetchMs?: number;
   };
 };
 

@@ -59,6 +59,7 @@ const gmailRoutes: FastifyPluginAsync = async (app) => {
       return reply.status(400).send({ error: 'validation', issues: parsed.error.issues });
     }
 
+    const fetchStart = Date.now();
     let messages;
     try {
       messages = await fetchRecentMessages({
@@ -73,13 +74,15 @@ const gmailRoutes: FastifyPluginAsync = async (app) => {
       request.log.error({ err: (err as Error).message }, 'gmail fetch failed');
       return reply.status(502).send({ error: `gmail fetch: ${(err as Error).message}` });
     }
+    const fetchMs = Date.now() - fetchStart;
 
     request.log.info(
       {
         msg: 'gmail sync: fetched messages',
         count: messages.length,
         days: parsed.data.days,
-        subjects: messages.map((m) => m.subject ?? '(no subject)').slice(0, 50),
+        fetchMs,
+        avgPerMail: messages.length > 0 ? Math.round(fetchMs / messages.length) : 0,
       },
       'gmail sync fetched',
     );
@@ -119,9 +122,12 @@ const gmailRoutes: FastifyPluginAsync = async (app) => {
       createdAt: new Date(),
     });
 
+    // Tuning: 12 mails/batch (subject+from+snippet stays under ~6KB even at 12),
+    // 8 parallel calls (Gemini Flash holds up well, fal.ai-side limit unknown but
+    // empirically OK). 500 mails → ~42 batches → ~6 waves → wall time ~12-20s.
     const result = await parseSubscriptionsBatched(batchInputs, {
-      batchSize: 8,
-      concurrency: 5,
+      batchSize: 12,
+      concurrency: 8,
       logger: request.log,
     });
     if (result.failedCount === result.batchCount && result.batchCount > 0) {
@@ -176,6 +182,7 @@ const gmailRoutes: FastifyPluginAsync = async (app) => {
         successful: result.successCount,
         failed: result.failedCount,
         durationMs: result.durationMs,
+        gmailFetchMs: fetchMs,
       },
     };
   });
