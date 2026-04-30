@@ -1,26 +1,12 @@
-import {
-  CheckCircle2Icon,
-  ChevronDownIcon,
-  Loader2Icon,
-  MailIcon,
-  SparklesIcon,
-  UnlinkIcon,
-} from 'lucide-react';
+import { Link } from '@tanstack/react-router';
+import { ArrowRightIcon, ChevronDownIcon, Loader2Icon, MailIcon, SparklesIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { signIn } from '@/lib/auth-client';
 import { CandidatesList } from './candidates-list';
-import { type SyncSubject, useGmailDisconnect, useGmailStatus, useGmailSync } from './use-gmail';
+import { type SyncSubject, useGmailStatus, useGmailSync } from './use-gmail';
 import { type Candidate, useParseText } from './use-parse-text';
 
 type Props = {
@@ -49,7 +35,6 @@ export const ImportModal = ({ open, onOpenChange, onAdded }: Props) => {
   const parse = useParseText();
   const gmailStatus = useGmailStatus();
   const gmailSync = useGmailSync();
-  const gmailDisconnect = useGmailDisconnect();
 
   // Reset on close
   useEffect(() => {
@@ -77,13 +62,6 @@ export const ImportModal = ({ open, onOpenChange, onAdded }: Props) => {
     }
   };
 
-  const onConnectGoogle = async () => {
-    await signIn.social({
-      provider: 'google',
-      callbackURL: window.location.href,
-    });
-  };
-
   const onGmailSync = async () => {
     setScannedSubjects(null);
     setScannedCount(null);
@@ -103,6 +81,7 @@ export const ImportModal = ({ open, onOpenChange, onAdded }: Props) => {
   };
 
   const gmailConfigured = Boolean(gmailStatus.data?.configured);
+  const gmailReady = Boolean(gmailStatus.data?.linked && gmailStatus.data.canRead);
   const defaultTab = gmailConfigured ? 'gmail' : 'paste';
 
   return (
@@ -112,10 +91,6 @@ export const ImportModal = ({ open, onOpenChange, onAdded }: Props) => {
           <DialogTitle className="flex items-center gap-2">
             <SparklesIcon className="size-4" /> İçe aktar
           </DialogTitle>
-          <DialogDescription>
-            Bir abonelik mailini yapıştır ya da Gmail'i bağlayıp son maillerden taratıp AI ile aday
-            çıkar. Hiçbir mail kaydedilmez.
-          </DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue={defaultTab} className="gap-4">
@@ -130,40 +105,9 @@ export const ImportModal = ({ open, onOpenChange, onAdded }: Props) => {
 
           {gmailConfigured && (
             <TabsContent value="gmail" className="flex flex-col gap-3">
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground">Durum:</span>
-                {gmailStatus.data?.linked ? (
-                  <Badge variant="muted" className="gap-1">
-                    <CheckCircle2Icon className="size-3" /> Bağlı
-                  </Badge>
-                ) : (
-                  <Badge variant="outline">Bağlı değil</Badge>
-                )}
-                {gmailStatus.data?.lastSyncedAt && (
-                  <span className="ml-auto text-xs text-muted-foreground">
-                    Son tarama: {new Date(gmailStatus.data.lastSyncedAt).toLocaleString('tr-TR')}
-                  </span>
-                )}
-              </div>
-
-              {!gmailStatus.data?.linked && (
-                <Button onClick={onConnectGoogle} className="w-fit">
-                  Gmail'i bağla
-                </Button>
-              )}
-
-              {gmailStatus.data?.linked && !gmailStatus.data.canRead && (
-                <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-3">
-                  <p className="text-sm text-destructive">
-                    Gmail okuma izni eksik. Bağlantıyı yenilemen gerekiyor.
-                  </p>
-                  <Button onClick={onConnectGoogle} className="w-fit">
-                    İzni yenile
-                  </Button>
-                </div>
-              )}
-
-              {gmailStatus.data?.linked && gmailStatus.data.canRead && (
+              {!gmailReady ? (
+                <ConnectionNotice canRead={Boolean(gmailStatus.data?.canRead)} />
+              ) : (
                 <>
                   <p className="text-sm text-muted-foreground">
                     Son {days} gündeki abonelik benzeri mailleri AI ile tarayalım.
@@ -208,14 +152,12 @@ export const ImportModal = ({ open, onOpenChange, onAdded }: Props) => {
                       )}{' '}
                       {gmailSync.isPending ? 'Maillere bakılıyor…' : 'Maillerden tara'}
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => gmailDisconnect.mutateAsync()}
-                      disabled={gmailDisconnect.isPending}
-                    >
-                      <UnlinkIcon /> Bağlantıyı kaldır
-                    </Button>
+                    {gmailStatus.data?.lastSyncedAt && (
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        Son tarama:{' '}
+                        {new Date(gmailStatus.data.lastSyncedAt).toLocaleString('tr-TR')}
+                      </span>
+                    )}
                   </div>
 
                   {gmailSync.isPending && (
@@ -287,6 +229,22 @@ export const ImportModal = ({ open, onOpenChange, onAdded }: Props) => {
     </Dialog>
   );
 };
+
+const ConnectionNotice = ({ canRead }: { canRead: boolean }) => (
+  <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed bg-muted/20 p-4">
+    <div className="flex items-center gap-3">
+      <MailIcon className="size-4 text-muted-foreground" />
+      <p className="text-sm font-medium">
+        {canRead ? 'Gmail bağlantısı eksik' : 'Gmail bağlı değil'}
+      </p>
+    </div>
+    <Button asChild variant="outline" size="sm">
+      <Link to="/connections">
+        Bağlantılar <ArrowRightIcon />
+      </Link>
+    </Button>
+  </div>
+);
 
 type ScanSummaryProps = {
   scannedCount: number;

@@ -90,13 +90,10 @@ function AppPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 pt-6 pb-16 sm:px-6">
       {/* Greeting + summary strip */}
-      <section className="mb-6 flex flex-col gap-1.5">
+      <section className="mb-6">
         <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
           {me.data ? `Selam ${me.data.user.name.split(' ')[0]}` : 'Selam'}
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Abonelikleri tek yerden takip et. Yenilemeler, tahmini maliyet, hızlı içe aktarma.
-        </p>
       </section>
 
       <SummaryStrip

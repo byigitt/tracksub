@@ -1,12 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteSubscriptionDialog } from './delete-subscription-dialog';
 import { SubscriptionForm } from './subscription-form';
@@ -35,11 +29,6 @@ export const SubscriptionModal = ({ open, onOpenChange, subscriptionId, onSucces
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{isEdit ? 'Aboneliği düzenle' : 'Yeni abonelik'}</DialogTitle>
-            <DialogDescription>
-              {isEdit
-                ? 'Bilgileri güncelle. Değişiklikler hemen kaydedilir.'
-                : 'Manuel bir abonelik ekle. Mailden içe aktarmak istersen iptal edip "İçe aktar" butonunu kullan.'}
-            </DialogDescription>
           </DialogHeader>
 
           {isEdit && sub.isPending ? (

@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useRouter } from '@tanstack/react-router';
-import { LogOutIcon, UserIcon } from 'lucide-react';
+import { useNavigate, useRouter } from '@tanstack/react-router';
+import { LinkIcon, LogOutIcon, UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -26,6 +26,7 @@ const initials = (name?: string | null, email?: string | null): string => {
 export const UserMenu = () => {
   const me = useMe();
   const router = useRouter();
+  const navigate = useNavigate();
   const qc = useQueryClient();
 
   const onSignOut = async () => {
@@ -57,6 +58,10 @@ export const UserMenu = () => {
           </div>
         )}
         {user && <DropdownMenuSeparator />}
+        <DropdownMenuItem onSelect={() => void navigate({ to: '/connections' })}>
+          <LinkIcon /> Bağlantılar
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={onSignOut}>
           <LogOutIcon /> Çıkış yap
         </DropdownMenuItem>
