@@ -17,6 +17,7 @@
     "auth:generate": "dotenv -e ../../.env -- better-auth generate --output ./src/db/schema.ts --y"
   },
   "dependencies": {
+    "@better-auth/expo": "catalog:",
     "@fal-ai/client": "catalog:",
     "@fastify/autoload": "catalog:",
     "@fastify/cors": "catalog:",

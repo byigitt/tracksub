@@ -1,7 +1,11 @@
+import { expo } from '@better-auth/expo';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { db } from '../db/client.ts';
 import { env, features } from '../env.ts';
+
+// Mobile app scheme — must match `apps/mobile/app.config.ts` `scheme`.
+const MOBILE_SCHEME = 'tracksub';
 
 // Gmail scope'lar: hem mailleri okumak (import) hem de hatırlatıcı mail göndermek (reminder).
 const GOOGLE_SCOPES = [
@@ -48,7 +52,15 @@ export const auth = betterAuth({
     updateAge: 60 * 60 * 24,
   },
 
-  trustedOrigins: [env.WEB_ORIGIN],
+  plugins: [expo()],
+
+  trustedOrigins: [
+    env.WEB_ORIGIN,
+    `${MOBILE_SCHEME}://`,
+    `${MOBILE_SCHEME}://*`,
+    // Expo Go / dev builds use exp:// with the LAN IP. Allowed only in dev.
+    ...(env.NODE_ENV !== 'production' ? ['exp://', 'exp://**', 'exp://*'] : []),
+  ],
 
   advanced: {
     cookiePrefix: 'tracksub',
