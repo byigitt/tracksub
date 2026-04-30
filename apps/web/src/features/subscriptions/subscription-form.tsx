@@ -35,6 +35,8 @@ type FormValues = {
   status: Status;
   startedAt: string; // yyyy-mm-dd
   nextBillingAt: string; // yyyy-mm-dd or empty
+  isTrial: boolean;
+  trialEndsAt: string; // yyyy-mm-dd or empty
   notes: string;
 };
 
@@ -58,6 +60,8 @@ const valuesFromSubscription = (sub: Subscription | null): FormValues => ({
   status: sub?.status ?? 'active',
   startedAt: toDateInput(sub?.startedAt) || new Date().toISOString().slice(0, 10),
   nextBillingAt: toDateInput(sub?.nextBillingAt),
+  isTrial: sub?.isTrial ?? false,
+  trialEndsAt: toDateInput(sub?.trialEndsAt),
   notes: sub?.notes ?? '',
 });
 
@@ -69,6 +73,7 @@ const buildBody = (values: FormValues): SubscriptionCreateBody & SubscriptionUpd
     currency: values.currency,
     period: values.period,
     status: values.status,
+    isTrial: values.isTrial,
     notes: values.notes.trim() || null,
   };
   if (values.period === 'custom') {
@@ -77,11 +82,22 @@ const buildBody = (values: FormValues): SubscriptionCreateBody & SubscriptionUpd
     body.customPeriodDays = null;
   }
   if (values.startedAt) body.startedAt = new Date(`${values.startedAt}T00:00:00Z`).toISOString();
-  if (values.nextBillingAt) {
-    body.nextBillingAt = new Date(`${values.nextBillingAt}T00:00:00Z`).toISOString();
-  } else {
-    // Let server compute. Send `null` only on update if user cleared it explicitly.
+
+  if (values.isTrial) {
+    // Trial mode: only the trial end date matters; server clears nextBillingAt.
     body.nextBillingAt = null;
+    body.trialEndsAt = values.trialEndsAt
+      ? new Date(`${values.trialEndsAt}T00:00:00Z`).toISOString()
+      : null;
+  } else {
+    // Paid mode: clear any prior trial end and pass through the renewal date.
+    body.trialEndsAt = null;
+    if (values.nextBillingAt) {
+      body.nextBillingAt = new Date(`${values.nextBillingAt}T00:00:00Z`).toISOString();
+    } else {
+      // Let server compute. Send `null` only on update if user cleared it explicitly.
+      body.nextBillingAt = null;
+    }
   }
   return body;
 };
@@ -297,6 +313,26 @@ export const SubscriptionForm = ({
         }
       </form.Subscribe>
 
+      <form.Field name="isTrial">
+        {(field) => (
+          <label className="flex items-start gap-3 rounded-md border bg-card px-3 py-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              className="mt-0.5 size-4 accent-foreground"
+              checked={field.state.value}
+              onChange={(e) => field.handleChange(e.target.checked)}
+              onBlur={field.handleBlur}
+            />
+            <span className="flex flex-col gap-0.5">
+              <span className="text-sm font-medium leading-tight">Ücretsiz deneme</span>
+              <span className="text-xs text-muted-foreground">
+                Deneme bitiminden 7/3/1/0 gün önce hatırlatma maili atılır.
+              </span>
+            </span>
+          </label>
+        )}
+      </form.Field>
+
       <div className="grid grid-cols-2 gap-3">
         <form.Field name="startedAt">
           {(field) => (
@@ -310,18 +346,44 @@ export const SubscriptionForm = ({
           )}
         </form.Field>
 
-        <form.Field name="nextBillingAt">
-          {(field) => (
-            <Field
-              label="Sonraki yenileme"
-              type="date"
-              hint="Boşsa periyottan otomatik hesaplanır"
-              value={field.state.value}
-              onChange={(e) => field.handleChange(e.target.value)}
-              onBlur={field.handleBlur}
-            />
-          )}
-        </form.Field>
+        <form.Subscribe selector={(s) => s.values.isTrial}>
+          {(isTrial) =>
+            isTrial ? (
+              <form.Field
+                name="trialEndsAt"
+                validators={{
+                  onChange: ({ value }) => (value ? undefined : 'Deneme bitişi gerekli'),
+                }}
+              >
+                {(field) => (
+                  <Field
+                    label="Deneme bitişi"
+                    type="date"
+                    required
+                    hint="Bu tarihten 7/3/1/0 gün önce hatırlatıcı"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                    error={field.state.meta.errors[0]?.toString()}
+                  />
+                )}
+              </form.Field>
+            ) : (
+              <form.Field name="nextBillingAt">
+                {(field) => (
+                  <Field
+                    label="Sonraki yenileme"
+                    type="date"
+                    hint="Boşsa periyottan otomatik hesaplanır"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                  />
+                )}
+              </form.Field>
+            )
+          }
+        </form.Subscribe>
       </div>
 
       <form.Field name="notes">

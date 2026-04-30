@@ -34,8 +34,11 @@ type Props = {
 
 // Sade kart — renkli sol şerit YOK. Yatay layout: sol meta, sağ tutar.
 // Tıklanabilir ama parent'tan onClick alır (modal-driven UX).
+// Trial mode → üst satırın countdown'ı ve sağ alttaki tarih `trialEndsAt`'a göre hesaplanır.
 export const SubscriptionCard = ({ subscription: s, onClick }: Props) => {
-  const remain = formatDaysLeft(s.nextBillingAt);
+  const targetIso = s.isTrial ? s.trialEndsAt : s.nextBillingAt;
+  const remainBase = formatDaysLeft(targetIso);
+  const remain = s.isTrial && remainBase ? `Deneme · ${remainBase}` : remainBase;
   const interactive = Boolean(onClick);
   const Tag = interactive ? 'button' : 'div';
   return (
@@ -50,7 +53,7 @@ export const SubscriptionCard = ({ subscription: s, onClick }: Props) => {
     >
       <BrandIcon name={s.name} vendor={s.vendor} size={44} className="mt-0.5" />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <div className={cn('text-xs font-medium', remainTone(s.nextBillingAt))}>{remain}</div>
+        <div className={cn('text-xs font-medium', remainTone(targetIso))}>{remain}</div>
         <div className="truncate text-base font-semibold leading-tight">{s.name}</div>
         <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
           {s.vendor && <span className="min-w-0 truncate">{s.vendor}</span>}
@@ -67,9 +70,9 @@ export const SubscriptionCard = ({ subscription: s, onClick }: Props) => {
           {formatMoney(s.amount, s.currency)}
         </div>
         <div className="text-xs text-muted-foreground">
-          {formatPeriod(s.period, s.customPeriodDays)}
+          {s.isTrial ? 'denemede' : formatPeriod(s.period, s.customPeriodDays)}
         </div>
-        <div className="text-[11px] text-muted-foreground/80">{formatDate(s.nextBillingAt)}</div>
+        <div className="text-[11px] text-muted-foreground/80">{formatDate(targetIso)}</div>
       </div>
     </Tag>
   );

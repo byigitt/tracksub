@@ -107,35 +107,38 @@ function AppPage() {
         yearly={summary.yearlyByCurrency}
       />
 
-      {/* Upcoming */}
+      {/* Upcoming — includes both renewals and trial endings, anchored on whichever date is set. */}
       {!subs.isPending && summary.upcoming.length > 0 && (
         <section className="mt-5">
           <h2 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Yaklaşan yenilemeler
+            Yaklaşanlar
           </h2>
           <ul className="flex flex-col divide-y rounded-lg border bg-card">
-            {summary.upcoming.slice(0, 3).map((s) => (
-              <li key={s.id}>
-                <button
-                  type="button"
-                  onClick={() => setModal('edit', s.id)}
-                  className={cn(
-                    'flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors',
-                    'hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
-                  )}
-                >
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-medium">{s.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {formatDaysLeft(s.nextBillingAt)}
+            {summary.upcoming.slice(0, 3).map((s) => {
+              const targetIso = s.isTrial ? s.trialEndsAt : s.nextBillingAt;
+              const baseLine = formatDaysLeft(targetIso);
+              const line = s.isTrial && baseLine ? `Deneme · ${baseLine}` : baseLine;
+              return (
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    onClick={() => setModal('edit', s.id)}
+                    className={cn(
+                      'flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors',
+                      'hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+                    )}
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium">{s.name}</div>
+                      <div className="text-xs text-muted-foreground">{line}</div>
                     </div>
-                  </div>
-                  <div className="font-mono text-sm font-semibold tabular-nums">
-                    {formatMoney(s.amount, s.currency)}
-                  </div>
-                </button>
-              </li>
-            ))}
+                    <div className="font-mono text-sm font-semibold tabular-nums">
+                      {formatMoney(s.amount, s.currency)}
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}
@@ -343,7 +346,7 @@ const EmptyState = ({ onNew, onImport }: { onNew: () => void; onImport: () => vo
         Manuel ekleyebilir ya da bir mail metni / Gmail üzerinden AI ile içe aktarabilirsin.
       </p>
     </div>
-    <div className="mt-1 flex gap-2">
+    <div className="mt-1 flex flex-wrap justify-center gap-2">
       <Button onClick={onNew}>
         <PlusIcon /> Yeni abonelik
       </Button>
