@@ -43,6 +43,14 @@ tracksub/
 ├── pnpm-workspace.yaml          # packages + catalog
 ├── tsconfig.base.json
 ├── .oxlintrc.json / .oxfmtrc.json / .oxfmtignore
+├── packages/                    # api+web+mobile arasinda paylasilan katmanlar
+│   ├── shared/                  # @tracksub/shared      — saf domain logic + wire types (sifir runtime dep)
+│   │                            #   period.ts (Period/Status/Source enum + computeNextBilling/rollForward/reminderOffsetFor)
+│   │                            #   types.ts (Subscription/Candidate/GmailStatus/SyncResponse wire DTOs)
+│   │                            #   format.ts, summary.ts
+│   ├── schemas/                 # @tracksub/schemas     — zod 4 validators (subscription/candidate/gmail) + ortak primitives
+│   ├── api-client/              # @tracksub/api-client  — platform-bagimsiz typed REST client (createApiClient + ApiError)
+│   └── query/                   # @tracksub/query       — TanStack Query hooks + ApiClientProvider + createQueryClient + cn
 ├── apps/
 │   ├── api/                     # Fastify + better-auth + drizzle
 │   │   ├── drizzle.config.ts
@@ -80,11 +88,11 @@ tracksub/
 │           │   ├── _authenticated.tsx        # guard
 │           │   └── _authenticated.dashboard.tsx
 │           ├── lib/
-│           │   ├── auth-client.ts
-│           │   ├── query-client.ts
-│           │   ├── theme.ts     # light/dark/system
-│           │   ├── api.ts       # fetch wrapper
-│           │   └── utils.ts     # cn()
+│           │   ├── auth-client.ts        # better-auth/react (platform-specific)
+│           │   ├── query-client.ts       # createQueryClient @tracksub/query
+│           │   ├── theme.ts              # light/dark/system
+│           │   ├── api.ts                # createApiClient @tracksub/api-client
+│           │   └── utils.ts              # cn() re-export from @tracksub/query
 │           ├── components/
 │           │   ├── ui/          # shadcn copy-paste atomları
 │           │   │   ├── button.tsx
@@ -195,20 +203,22 @@ pnpm dev
 
 ## Komutlar
 
-| Komut                | Açıklama                                         |
-| -------------------- | ------------------------------------------------ |
-| `pnpm dev`           | api + web paralel watch                          |
-| `pnpm build`         | her iki app'i build et                           |
-| `pnpm typecheck`     | tüm workspace tsgo ile typecheck                 |
-| `pnpm lint`          | oxlint                                           |
-| `pnpm format`        | oxfmt ile format (auto-fix)                      |
-| `pnpm format:check`  | oxfmt --check (CI için)                          |
-| `pnpm check`         | format:check + lint + typecheck                  |
-| `pnpm fix`           | format + lint --fix                              |
-| `pnpm db:generate`   | drizzle-kit migration üret                       |
-| `pnpm db:migrate`    | migrationları uygula                             |
-| `pnpm db:studio`     | drizzle-studio aç                                |
-| `pnpm auth:generate` | better-auth → `apps/api/src/db/schema.ts` yenile |
+| Komut                 | Açıklama                                         |
+| --------------------- | ------------------------------------------------ |
+| `pnpm dev`            | api + web + paket watch'ları paralel             |
+| `pnpm build`          | once packages, sonra apps build (zincirli)       |
+| `pnpm build:packages` | sadece `packages/*` build (paket dist'i üret)    |
+| `pnpm clean`          | tüm workspace dist'leri temizle                  |
+| `pnpm typecheck`      | tüm workspace tsgo ile typecheck                 |
+| `pnpm lint`           | oxlint                                           |
+| `pnpm format`         | oxfmt ile format (auto-fix)                      |
+| `pnpm format:check`   | oxfmt --check (CI için)                          |
+| `pnpm check`          | format:check + lint + typecheck                  |
+| `pnpm fix`            | format + lint --fix                              |
+| `pnpm db:generate`    | drizzle-kit migration üret                       |
+| `pnpm db:migrate`     | migrationları uygula                             |
+| `pnpm db:studio`      | drizzle-studio aç                                |
+| `pnpm auth:generate`  | better-auth → `apps/api/src/db/schema.ts` yenile |
 
 ## Yeni shadcn bileşeni ekleme
 

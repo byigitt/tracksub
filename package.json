@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm -r --parallel run dev",
-    "build": "pnpm -r run build",
+    "build": "pnpm build:packages && pnpm -r --filter './apps/*' run build",
+    "build:packages": "pnpm -r --filter './packages/*' run build",
+    "clean": "pnpm -r run clean",
     "start": "pnpm --filter @tracksub/api run start",
     "typecheck": "pnpm -r run typecheck",
     "lint": "oxlint",
